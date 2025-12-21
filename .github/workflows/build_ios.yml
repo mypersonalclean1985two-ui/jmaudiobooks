@@ -62,10 +62,11 @@ jobs:
         env:
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_BASE64 }}
           KEYCHAIN_PASSWORD: "temporary_password"
+          PROFILE_UUID: "bc145a22-9608-4800-8fd0-663229c94131"
         run: |
           # create variables
           CERTIFICATE_PATH=$PWD/build_certificate.p12
-          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          PP_PATH=$RUNNER_TEMP/$PROFILE_UUID.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
           echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
@@ -81,7 +82,7 @@ jobs:
 
           # apply provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
 
       - name: Sync Capacitor
         run: npx cap sync ios
@@ -96,9 +97,10 @@ jobs:
             -archivePath App.xcarchive \
             archive \
             CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER="JM Audiobooks App Store" \
+            PROVISIONING_PROFILE_SPECIFIER="bc145a22-9608-4800-8fd0-663229c94131" \
             DEVELOPMENT_TEAM="QY25P2CW87" \
-            CODE_SIGN_IDENTITY="Apple Distribution" | tee xcodebuild_archive.log
+            CODE_SIGN_IDENTITY="Apple Distribution: Saba Rehmat (QY25P2CW87)" | tee xcodebuild_archive.log
+
 
       - name: Export IPA
         run: |
