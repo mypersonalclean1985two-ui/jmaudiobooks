@@ -83,6 +83,9 @@ jobs:
           # apply provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
+          
+          echo "Verifying Profile Installation:"
+          ls -l ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Sync Capacitor
         run: npx cap sync ios
@@ -97,9 +100,11 @@ jobs:
             -archivePath App.xcarchive \
             archive \
             CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER="bc145a22-9608-4800-8fd0-663229c94131" \
+            PROVISIONING_PROFILE=$PROFILE_UUID \
+            PROVISIONING_PROFILE_SPECIFIER=$PROFILE_UUID \
             DEVELOPMENT_TEAM="QY25P2CW87" \
             CODE_SIGN_IDENTITY="Apple Distribution: Saba Rehmat (QY25P2CW87)" | tee xcodebuild_archive.log
+
 
 
       - name: Export IPA
