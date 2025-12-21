@@ -90,6 +90,17 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync ios
 
+      - name: Enforce Project Signing Settings
+        run: |
+          cd ios/App/App.xcodeproj
+          # Force Manual Signing and correct Team/Bundle ID in project file
+          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = .*/PROVISIONING_PROFILE_SPECIFIER = "bc145a22-aaba-4800-9608-e8fd063229c9";/g' project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = QY25P2CW87;/g' project.pbxproj
+          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = com.jmaudiobooks.jmaudiobooks;/g' project.pbxproj
+          sed -i '' 's/CODE_SIGN_STYLE = .*/CODE_SIGN_STYLE = Manual;/g' project.pbxproj
+          # Ensure ProvisioningStyle is Manual in TargetAttributes
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' project.pbxproj
+
       - name: Build xArchive
         run: |
           set -o pipefail
@@ -100,10 +111,10 @@ jobs:
             -archivePath App.xcarchive \
             archive \
             CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE=$PROFILE_UUID \
-            PROVISIONING_PROFILE_SPECIFIER=$PROFILE_UUID \
+            PROVISIONING_PROFILE_SPECIFIER="bc145a22-aaba-4800-9608-e8fd063229c9" \
             DEVELOPMENT_TEAM="QY25P2CW87" \
             CODE_SIGN_IDENTITY="Apple Distribution: Saba Rehmat (QY25P2CW87)" | tee xcodebuild_archive.log
+
 
 
 
