@@ -97,7 +97,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER="JM Audiobooks App Store" \
             DEVELOPMENT_TEAM="QY25P2CW87" \
-            CODE_SIGN_IDENTITY="Apple Distribution"
+            CODE_SIGN_IDENTITY="Apple Distribution" | tee xcodebuild_archive.log
 
       - name: Export IPA
         run: |
@@ -105,16 +105,26 @@ jobs:
           # Create export options plist manually
           /usr/libexec/PlistBuddy -c "Add :method string app-store" exportOptions.plist
           /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" exportOptions.plist
-          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:com.jmaudiobooks.app string JM Audiobooks App Store" exportOptions.plist
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:com.jmaudiobooks.jmaudiobooks string JM Audiobooks App Store" exportOptions.plist
           /usr/libexec/PlistBuddy -c "Add :signingStyle string manual" exportOptions.plist
           /usr/libexec/PlistBuddy -c "Add :teamID string QY25P2CW87" exportOptions.plist
 
           xcodebuild -exportArchive \
             -archivePath App.xcarchive \
             -exportOptionsPlist exportOptions.plist \
-            -exportPath output
+            -exportPath output | tee xcodebuild_export.log
+
+
+      - name: Upload Build Logs on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-build-logs
+          path: ios/App/*.log
+
 
       - name: Upload Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ios-app-ipa
