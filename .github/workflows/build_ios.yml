@@ -32,18 +32,30 @@ jobs:
           # Convert DER to PEM
           openssl x509 -inform DER -in distribution.cer -out distribution.pem
           
-          # Combine to P12 with legacy flags for compatibility with macOS keychain import
-          # Newer OpenSSL (3.x) defaults are often incompatible with older 'security import'
-          openssl pkcs12 -export -legacy -descert \
-            -inkey private_key.pem \
-            -in distribution.pem \
-            -out build_certificate.p12 \
-            -passout pass:password
+          echo "Checking OpenSSL version..."
+          openssl version
+          
+          # Combine to P12 with appropriate flags
+          if openssl version | grep -q "OpenSSL 3"; then
+            echo "OpenSSL 3 detected, using legacy flags for compatibility"
+            openssl pkcs12 -export -legacy -descert \
+              -inkey private_key.pem \
+              -in distribution.pem \
+              -out build_certificate.p12 \
+              -passout pass:password
+          else
+            echo "Standard OpenSSL/LibreSSL detected"
+            openssl pkcs12 -export \
+              -inkey private_key.pem \
+              -in distribution.pem \
+              -out build_certificate.p12 \
+              -passout pass:password
+          fi
 
           echo "P12 Generated. Verifying..."
-          # Verify the P12 can be read back
           openssl pkcs12 -info -in build_certificate.p12 -passin pass:password -nokeys
           ls -l build_certificate.p12
+
 
 
       - name: Install Certificate and Profile
