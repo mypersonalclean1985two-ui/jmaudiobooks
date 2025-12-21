@@ -5,7 +5,7 @@ package-lock.json
 # Firebase
 .firebase/
 .firebaserc
-# serviceAccountKey.json
+serviceAccountKey.json
 
 # IDE
 .vscode/
