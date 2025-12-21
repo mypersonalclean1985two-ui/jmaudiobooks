@@ -9,7 +9,9 @@ def generate_secrets():
     # 1. P12 File
     if os.path.exists("distribution.p12"):
         with open("distribution.p12", "rb") as f:
-            p12_b64 = base64.b64encode(f.read()).decode('utf-8')
+            # Encode to Base64 and decode bytes to string
+            # IMPORTANT: replacing newlines to ensure single line for GitHub Secrets
+            p12_b64 = base64.b64encode(f.read()).decode('utf-8').replace('\n', '')
             print(f"1. Name: IOS_P12_BASE64")
             print(f"   Value: (Copy the huge string below)")
             print(p12_b64)
