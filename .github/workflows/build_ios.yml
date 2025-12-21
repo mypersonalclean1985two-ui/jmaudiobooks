@@ -1,0 +1,89 @@
+name: Build iOS App
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Install Certificate and Profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_BASE64 }}
+          KEYCHAIN_PASSWORD: "temporary_password"
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # import certificate and provisioning profile from secrets
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          # create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t agg -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # apply provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Build xArchive
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath App.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="JM Audiobooks App Store" \
+            DEVELOPMENT_TEAM="QY25P2CW87" \
+            CODE_SIGN_IDENTITY="Apple Distribution"
+
+      - name: Export IPA
+        run: |
+          cd ios/App
+          # Create export options plist manually
+          /usr/libexec/PlistBuddy -c "Add :method string app-store" exportOptions.plist
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" exportOptions.plist
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:com.jmaudiobooks.app string JM Audiobooks App Store" exportOptions.plist
+          /usr/libexec/PlistBuddy -c "Add :signingStyle string manual" exportOptions.plist
+          /usr/libexec/PlistBuddy -c "Add :teamID string QY25P2CW87" exportOptions.plist
+
+          xcodebuild -exportArchive \
+            -archivePath App.xcarchive \
+            -exportOptionsPlist exportOptions.plist \
+            -exportPath output
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-app-ipa
+          path: ios/App/output/App.ipa

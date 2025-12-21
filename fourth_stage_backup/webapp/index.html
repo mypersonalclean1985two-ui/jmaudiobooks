@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JM Audiobooks - Audio Player</title>
+    <link rel="stylesheet" href="css/style.css?v=4.0">
+    <link rel="stylesheet" href="css/subscription.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="JM Audiobooks">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="top-bar-header">
+                <div class="app-icon">📚</div>
+                <span class="greeting" id="greeting">Good evening</span>
+                <div class="profile-pic" onclick="navigateTo('profile')">👤</div>
+            </div>
+            <h1 class="app-title">JM Audiobooks</h1>
+        </div>
+
+        <!-- Search -->
+        <div class="search-section">
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" id="search-input"
+                    placeholder="Search by title, author, or genre">
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="main-content">
+            <!-- Content will be dynamically loaded here -->
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <a href="#" class="nav-btn active" data-target="home">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="#" class="nav-btn" data-target="discover">
+                <span class="nav-icon">🔍</span>
+                <span>Discover</span>
+            </a>
+            <a href="#" class="nav-btn" data-target="library">
+                <span class="nav-icon">📚</span>
+                <span>Library</span>
+            </a>
+            <a href="#" class="nav-btn" data-target="profile">
+                <span class="nav-icon">👤</span>
+                <span>Profile</span>
+            </a>
+        </div>
+
+        <!-- Book Modal -->
+        <div class="modal" id="book-modal">
+            <div class="modal-content">
+                <span class="close-btn">×</span>
+                <div class="modal-left">
+                    <img src="" alt="Book Cover" class="modal-cover" id="modal-cover-img">
+                </div>
+                <div class="modal-right">
+                    <h2 class="modal-title" id="modal-title">Book Title</h2>
+                    <p class="modal-author" id="modal-author">Author Name</p>
+                    <p class="price-tag" id="modal-price">$0.00</p>
+                    <div class="modal-actions">
+                        <button class="btn-primary" id="modal-read-btn">Listen Now</button>
+                        <button class="btn-secondary">Add to Library</button>
+                    </div>
+                    <div class="modal-desc">
+                        <h3 style="color: var(--text-primary);">About</h3>
+                        <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+                            <div style="text-align: center; margin-bottom: 8px;">
+                                <div style="position: relative; width: 100px; height: 100px; margin: 0 auto;">
+                                    <img id="edit-profile-preview" src=""
+                                        style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: none;">
+                                    <div id="edit-profile-placeholder"
+                                        style="width: 100%; height: 100%; background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white;">
+                                        👤</div>
+                                    <label for="profile-upload"
+                                        style="position: absolute; bottom: 0; right: 0; background: var(--primary-color); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                                        📷
+                                    </label>
+                                    <input type="file" id="profile-upload" accept="image/*" style="display: none;">
+                                </div>
+                            </div>
+                            <div>
+                                <label
+                                    style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 8px; display: block;">Name</label>
+                                <input type="text" id="profile-name-input" class="search-input"
+                                    style="padding-left: 16px;" placeholder="Enter your name">
+                            </div>
+                            <div>
+                                <label
+                                    style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 8px; display: block;">Bio</label>
+                                <textarea id="profile-bio-input" class="search-input"
+                                    style="padding: 12px 16px; height: 80px; resize: none; font-family: inherit;"
+                                    placeholder="Tell us about yourself..."></textarea>
+                            </div>
+                            <div>
+                                <label
+                                    style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 8px; display: block;">Email</label>
+                                <input type="email" id="profile-email-input" class="search-input"
+                                    style="padding-left: 16px;" placeholder="Enter your email">
+                            </div>
+                            <button class="btn-primary" id="save-profile-btn" style="margin-top: 8px;">Save
+                                Changes</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Modal -->
+                <div class="modal" id="settings-modal">
+                    <div class="modal-content" style="height: 70%; border-radius: 24px 24px 0 0;">
+                        <span class="close-btn" id="close-settings-modal">×</span>
+                        <h2 class="modal-title" style="margin-bottom: 24px;">Settings</h2>
+                        <div class="settings-list">
+                            <div class="settings-item">
+                                <div class="settings-icon">🌙</div>
+                                <div class="settings-info">
+                                    <div class="settings-label">Dark Mode</div>
+                                    <div class="settings-sub">Adjust app appearance</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="dark-mode-toggle" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <div class="settings-icon">🔔</div>
+                                <div class="settings-info">
+                                    <div class="settings-label">Notifications</div>
+                                    <div class="settings-sub">Manage alerts</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item" onclick="alert('JM Audiobooks v3.0\nBuilt with ❤️')">
+                                <div class="settings-icon">ℹ️</div>
+                                <div class="settings-info">
+                                    <div class="settings-label">About App</div>
+                                    <div class="settings-sub">Version 3.0</div>
+                                </div>
+                                <div style="color: var(--text-secondary);">›</div>
+                            </div>
+                            <div class="settings-item" onclick="alert('Privacy is important to us.')">
+                                <div class="settings-icon">🔒</div>
+                                <div class="settings-info">
+                                    <div class="settings-label">Privacy Policy</div>
+                                    <div class="settings-sub">Read our terms</div>
+                                </div>
+                                <div style="color: var(--text-secondary);">›</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logout Confirmation Modal -->
+                <div class="modal" id="logout-modal">
+                    <div class="modal-content" style="height: auto; border-radius: 24px; text-align: center;">
+                        <h2 class="modal-title" style="margin-bottom: 16px;">Log Out</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 24px;">Are you sure you want to log out?
+                            Your
+                            profile will be reset to Guest.</p>
+                        <div style="display: flex; gap: 16px;">
+                            <button class="btn-secondary" id="cancel-logout-btn">Cancel</button>
+                            <button class="btn-primary" id="confirm-logout-btn"
+                                style="background-color: #ef4444; color: white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);">Log
+                                Out</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subscription Modal -->
+            <div id="subscription-modal" class="modal">
+                <div class="plan-period">per month</div>
+                <button class="sub-btn" onclick="window.purchaseSubscription('monthly', 12.40)">Select</button>
+            </div>
+
+            <!-- Quarterly -->
+            <div class="pricing-card">
+                <div class="plan-name">Quarterly</div>
+                <div class="plan-price">$32.00</div>
+                <div class="plan-period">every 3 months</div>
+                <button class="sub-btn" onclick="window.purchaseSubscription('quarterly', 32.00)">Select</button>
+            </div>
+
+            <!-- Yearly -->
+            <div class="pricing-card">
+                <div class="popular-tag">Best Value</div>
+                <div class="plan-name">Yearly</div>
+                <div class="plan-price">$99.00</div>
+                <div class="plan-period">per year</div>
+                <button class="sub-btn" onclick="window.purchaseSubscription('yearly', 99.00)">Select</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <!-- Category utilities -->
+    <script src="js/category-utils.js"></script>
+    <script src="js/category-enhance.js"></script>
+
+
+    <!-- Config -->
+    <script src="js/firebase-config.js"></script>
+
+    <script src="js/app.js?v=7.0"></script>
+</body>
+
+</html>

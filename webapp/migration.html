@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Migration Tool</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #1f2937;
+            color: white;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .log {
+            background: #111827;
+            padding: 15px;
+            border-radius: 8px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+
+        .btn {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress {
+            margin-top: 20px;
+            height: 20px;
+            background: #374151;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            background: #10b981;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .success {
+            color: #10b981;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🚀 Migration to Firebase</h1>
+        <p>This tool will upload your local books to the Firebase Cloud.</p>
+        <p><strong>Prerequisite:</strong> Ensure the local backend server is running.</p>
+
+        <button id="startBtn" class="btn" onclick="startMigration()">Start Migration</button>
+
+        <div class="progress">
+            <div id="progressBar" class="bar"></div>
+        </div>
+
+        <div id="log" class="log">Ready to start...</div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+
+    <!-- Config -->
+    <script src="js/firebase-config.js"></script>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        const logEl = document.getElementById('log');
+        const barEl = document.getElementById('progressBar');
+        const btn = document.getElementById('startBtn');
+
+        function log(msg, type = '') {
+            const div = document.createElement('div');
+            div.textContent = `> ${msg}`;
+            if (type) div.className = type;
+            logEl.appendChild(div);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        async function startMigration() {
+            btn.disabled = true;
+            log('Starting migration...', 'success');
+
+            try {
+                // 1. Fetch Local Books
+                log('Fetching local books...');
+                const response = await fetch(`${API_URL}/api/books`);
+                if (!response.ok) throw new Error('Failed to connect to local server. Is it running?');
+                const books = await response.json();
+                log(`Found ${books.length} books to upload.`);
+
+                const total = books.length;
+                let processed = 0;
+
+                // 2. Process Each Book
+                for (const book of books) {
+                    log(`Processing: ${book.title}...`);
+
+                    // Upload Cover
+                    let coverUrl = book.cover;
+                    if (!book.cover.startsWith('http')) {
+                        log(`  Uploading cover: ${book.cover}`);
+                        const coverBlob = await fetch(`${API_URL}/data/covers/${book.cover}`).then(r => r.blob());
+                        const coverRef = storage.ref(`covers/${book.cover}`);
+                        await coverRef.put(coverBlob);
+                        coverUrl = await coverRef.getDownloadURL();
+                    }
+
+                    // Upload File
+                    let fileUrl = book.file;
+                    if (!book.file.startsWith('http')) {
+                        log(`  Uploading PDF: ${book.file}`);
+                        const fileBlob = await fetch(`${API_URL}/data/files/${book.file}`).then(r => r.blob());
+                        const fileRef = storage.ref(`files/${book.file}`);
+                        await fileRef.put(fileBlob);
+                        fileUrl = await fileRef.getDownloadURL();
+                    }
+
+                    // Save to Firestore
+                    log(`  Saving to Firestore...`);
+                    await db.collection('books').doc(book.id.toString()).set({
+                        id: book.id,
+                        title: book.title,
+                        author: book.author,
+                        category: book.category,
+                        price: book.price,
+                        description: book.description || '',
+                        coverUrl: coverUrl,
+                        fileUrl: fileUrl,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    processed++;
+                    barEl.style.width = `${(processed / total) * 100}%`;
+                    log(`Completed: ${book.title}`, 'success');
+                }
+
+                log('Migration Complete! All books are now in the cloud.', 'success');
+                alert('Migration Complete!');
+
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>

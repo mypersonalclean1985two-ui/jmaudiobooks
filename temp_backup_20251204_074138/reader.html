@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader - JM Books</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .reader-container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .reader-header {
+            background-color: #111827;
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+            font-weight: 600;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .book-title {
+            font-size: 1rem;
+            font-weight: 600;
+            flex: 1;
+            text-align: center;
+            padding: 0 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .reader-controls {
+            background-color: #111827;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-btn {
+            background-color: #374151;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .control-btn:hover {
+            background-color: #4b5563;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .pdf-viewer {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #1f2937;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #pdf-canvas {
+            max-width: 100%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            color: white;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="reader-container">
+        <div class="reader-header">
+            <button class="back-btn" onclick="goBack()">
+                <span>←</span>
+                <span>Home</span>
+            </button>
+            <div class="book-title" id="book-title">Loading...</div>
+            <div style="width: 90px;"></div>
+        </div>
+
+        <div class="pdf-viewer" id="pdf-viewer">
+            <div class="loading">Loading PDF...</div>
+        </div>
+
+        <div class="reader-controls">
+            <button class="control-btn" id="prev-btn" onclick="prevPage()">Previous</button>
+            <span class="page-info">
+                <span id="current-page">1</span> / <span id="total-pages">-</span>
+            </span>
+            <button class="control-btn" id="next-btn" onclick="nextPage()">Next</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let pdfDoc = null;
+        let currentPage = 1;
+        let totalPages = 0;
+        let canvas = null;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookFile = urlParams.get('file');
+        const bookTitle = urlParams.get('title') || 'Book Reader';
+        const bookId = urlParams.get('id');
+
+        document.getElementById('book-title').textContent = bookTitle;
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        async function loadPDF() {
+            try {
+                let pdfPath = bookFile;
+                if (!bookFile.startsWith('http')) {
+                    // Assume it's a storage path, try to get download URL
+                    try {
+                        const url = await window.firebaseStorage.ref(bookFile).getDownloadURL();
+                        const loadingTask = pdfjsLib.getDocument(url);
+                        pdfDoc = await loadingTask.promise;
+                    } catch (err) {
+                        console.error("Error getting download URL or loading doc:", err);
+                        // Fallback to local if error (though likely won't work for cloud files)
+                        pdfPath = `../data/files/${bookFile}`;
+                        const loadingTask = pdfjsLib.getDocument(pdfPath);
+                        pdfDoc = await loadingTask.promise;
+                    }
+                } else {
+                    const loadingTask = pdfjsLib.getDocument(pdfPath);
+                    pdfDoc = await loadingTask.promise;
+                }
+                totalPages = pdfDoc.numPages;
+
+                document.getElementById('total-pages').textContent = totalPages;
+
+                canvas = document.createElement('canvas');
+                canvas.id = 'pdf-canvas';
+
+                const viewer = document.getElementById('pdf-viewer');
+                viewer.innerHTML = '';
+                viewer.appendChild(canvas);
+
+                renderPage(1);
+            } catch (error) {
+                console.error('Error loading PDF:', error);
+                document.getElementById('pdf-viewer').innerHTML =
+                    '<div class="loading">Error loading PDF. Please try again.</div>';
+            }
+        }
+
+        async function renderPage(pageNum) {
+            try {
+                const page = await pdfDoc.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 1.5 });
+
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+
+                await page.render(renderContext).promise;
+
+                currentPage = pageNum;
+                document.getElementById('current-page').textContent = currentPage;
+
+                saveProgress();
+
+                document.getElementById('prev-btn').disabled = currentPage === 1;
+                document.getElementById('next-btn').disabled = currentPage === totalPages;
+
+                document.getElementById('pdf-viewer').scrollTop = 0;
+            } catch (error) {
+                console.error('Error rendering page:', error);
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                renderPage(currentPage - 1);
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                renderPage(currentPage + 1);
+            }
+        }
+
+        async function saveProgress() {
+            if (!bookId || totalPages === 0) return;
+
+            const progress = Math.round((currentPage / totalPages) * 100);
+            const progressData = {
+                bookId: bookId,
+                progress: progress,
+                chapter: currentPage, // Using page as chapter for PDF
+                totalChapters: totalPages,
+                lastRead: new Date().toISOString()
+            };
+
+            // Save to LocalStorage
+            localStorage.setItem('currentlyReading', JSON.stringify(progressData));
+
+            let allProgress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
+            allProgress[bookId] = progressData;
+            localStorage.setItem('readingProgress', JSON.stringify(allProgress));
+
+            // Save to Firestore if logged in
+            const user = firebase.auth().currentUser;
+            if (user) {
+                await window.firebaseHelpers.updateReadingProgress(user.uid, bookId, progressData);
+            }
+        }
+
+        if (bookFile) {
+            loadPDF();
+        } else {
+            document.getElementById('pdf-viewer').innerHTML =
+                '<div class="loading">No book file specified.</div>';
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Player</title>
+    <link rel="stylesheet" href="css/player.css">
+</head>
+
+<body>
+    <!-- Blurred Background -->
+    <div class="player-background" id="bg-blur"></div>
+
+    <div class="player-container">
+        <!-- Header -->
+        <div class="player-header">
+            <button class="back-btn" onclick="window.history.back()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="header-title">Now Playing</div>
+            <div class="header-spacer"></div> <!-- For balance -->
+        </div>
+
+        <!-- Cover Art -->
+        <div class="cover-wrapper">
+            <div class="cover-container">
+                <img id="cover-image" src="" alt="Cover" class="cover-art">
+            </div>
+        </div>
+
+        <!-- Book Info -->
+        <div class="book-info">
+            <h2 id="book-title">Loading...</h2>
+            <p id="book-author">...</p>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-section">
+            <div class="progress-bar-container" id="progress-container">
+                <div class="progress-fill" id="progress-fill">
+                    <div class="progress-handle"></div>
+                </div>
+            </div>
+            <div class="time-display">
+                <span id="current-time">0:00</span>
+                <span id="total-time">0:00</span>
+            </div>
+        </div>
+
+        <!-- Main Controls -->
+        <div class="main-controls">
+            <button class="control-btn skip-btn" id="rewind-btn" aria-label="Rewind 15s">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" />
+                </svg>
+            </button>
+
+            <button class="control-btn play-btn" id="play-pause-btn" aria-label="Play">
+                <svg id="play-icon" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+            </button>
+
+            <button class="control-btn skip-btn" id="forward-btn" aria-label="Forward 15s">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M13 17l5-5-5-5M6 17l5-5-5-5" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Secondary Controls -->
+        <div class="secondary-controls">
+            <button class="sec-btn" id="speed-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M16.2 7.8l-2 6.3-1.5 2" />
+                </svg>
+                <span id="speed-label">1x</span>
+            </button>
+            <button class="sec-btn" id="sleep-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span id="sleep-label">Off</span>
+            </button>
+            <button class="sec-btn" id="bookmark-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="chapters">Chapters</button>
+            <button class="tab-btn" data-tab="bookmarks">Bookmarks</button>
+        </div>
+
+        <!-- Lists -->
+        <div class="list-container" id="list-container">
+            <!-- Content populated by JS -->
+        </div>
+
+    </div>
+
+    <!-- Modals -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Speed Modal -->
+    <div class="bottom-sheet" id="speed-sheet">
+        <div class="sheet-header">
+            <div class="sheet-title">Playback Speed</div>
+            <button class="close-sheet" onclick="closeSheets()"><svg width="24" height="24" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg></button>
+        </div>
+        <div class="option-grid">
+            <button class="option-btn" onclick="setSpeed(0.5)">0.5x</button>
+            <button class="option-btn" onclick="setSpeed(0.75)">0.75x</button>
+            <button class="option-btn selected" onclick="setSpeed(1.0)">1.0x</button>
+            <button class="option-btn" onclick="setSpeed(1.25)">1.25x</button>
+            <button class="option-btn" onclick="setSpeed(1.5)">1.5x</button>
+            <button class="option-btn" onclick="setSpeed(2.0)">2.0x</button>
+        </div>
+    </div>
+
+    <!-- Sleep Timer Modal -->
+    <div class="bottom-sheet" id="sleep-sheet">
+        <div class="sheet-header">
+            <div class="sheet-title">Sleep Timer</div>
+            <button class="close-sheet" onclick="closeSheets()"><svg width="24" height="24" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg></button>
+        </div>
+        <div class="option-grid">
+            <button class="option-btn selected" onclick="setSleep(0)">Off</button>
+            <button class="option-btn" onclick="setSleep(15)">15 min</button>
+            <button class="option-btn" onclick="setSleep(30)">30 min</button>
+            <button class="option-btn" onclick="setSleep(45)">45 min</button>
+            <button class="option-btn" onclick="setSleep(60)">60 min</button>
+        </div>
+    </div>
+
+    <!-- Hidden Audio -->
+    <audio id="audio-player" preload="metadata"></audio>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/player.js"></script>
+</body>
+
+</html>

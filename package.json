@@ -1,0 +1,21 @@
+{
+    "name": "shadow-library",
+    "version": "1.0.0",
+    "description": "Shadow Library - E-books Web App with Firebase",
+    "scripts": {
+        "upload-books": "node scripts/upload-to-firebase.js",
+        "deploy": "firebase deploy",
+        "deploy:hosting": "firebase deploy --only hosting",
+        "deploy:firestore": "firebase deploy --only firestore",
+        "deploy:storage": "firebase deploy --only storage"
+    },
+    "dependencies": {
+        "@capacitor/cli": "^8.0.0",
+        "@capacitor/core": "^8.0.0",
+        "@capacitor/ios": "^8.0.0",
+        "firebase-admin": "^12.7.0"
+    },
+    "devDependencies": {
+        "firebase-tools": "^13.0.0"
+    }
+}

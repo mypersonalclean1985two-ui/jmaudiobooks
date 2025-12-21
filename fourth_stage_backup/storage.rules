@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Book covers - public read access
+    match /covers/{fileName} {
+      allow read: if true;
+      allow write: if false; // Only via admin SDK
+    }
+    
+    // PDF files - authenticated users only
+    match /files/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only via admin SDK
+    }
+  }
+}

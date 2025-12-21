@@ -1,0 +1,202 @@
+[
+  {
+    "id": "1",
+    "title": "The Midnight Library",
+    "author": "Matt Haig",
+    "price": 14.99,
+    "category": "Fiction",
+    "cover": "midnight_library.jpg",
+    "file": "midnight_library.pdf",
+    "description": "Between life and death there is a library, and within that library, the shelves go on forever. Every book provides a chance to try another life you could have lived."
+  },
+  {
+    "id": "2",
+    "title": "The Alchemist",
+    "author": "Paulo Coelho",
+    "price": 12.99,
+    "category": "Fiction",
+    "cover": "alchemist.jpg",
+    "file": "alchemist.pdf",
+    "description": "A fable about following your dream. Santiago, an Andalusian shepherd boy, travels from his homeland in Spain to the Egyptian desert in search of a treasure buried in the Pyramids."
+  },
+  {
+    "id": "3",
+    "title": "Dune",
+    "author": "Frank Herbert",
+    "price": 18.99,
+    "category": "Sci-Fi",
+    "cover": "dune.jpg",
+    "file": "dune.pdf",
+    "description": "Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides, heir to a noble family tasked with ruling an inhospitable world where the only thing of value is the 'spice' melange."
+  },
+  {
+    "id": "4",
+    "title": "Project Hail Mary",
+    "author": "Andy Weir",
+    "price": 16.99,
+    "category": "Sci-Fi",
+    "cover": "project_hail_mary.jpg",
+    "file": "project_hail_mary.pdf",
+    "description": "Ryland Grace is the sole survivor on a desperate, last-chance mission—and if he fails, humanity and the earth itself will perish."
+  },
+  {
+    "id": "5",
+    "title": "The Silent Patient",
+    "author": "Alex Michaelides",
+    "price": 13.99,
+    "category": "Mystery",
+    "cover": "silent_patient.jpg",
+    "file": "silent_patient.pdf",
+    "description": "Alicia Berenson’s life is seemingly perfect. A famous painter married to an in-demand fashion photographer, she lives in a grand house with big windows overlooking a park in one of London’s most desirable areas."
+  },
+  {
+    "id": "6",
+    "title": "Gone Girl",
+    "author": "Gillian Flynn",
+    "price": 11.99,
+    "category": "Mystery",
+    "cover": "gone_girl.jpg",
+    "file": "gone_girl.pdf",
+    "description": "On a warm summer morning in North Carthage, Missouri, it is Nick and Amy Dunne’s fifth wedding anniversary. Presents are being wrapped and reservations are being made when Nick’s clever and beautiful wife disappears."
+  },
+  {
+    "id": "7",
+    "title": "It Ends with Us",
+    "author": "Colleen Hoover",
+    "price": 10.99,
+    "category": "Romance",
+    "cover": "it_ends_with_us.jpg",
+    "file": "it_ends_with_us.pdf",
+    "description": "Lily hasn’t always had it easy, but that’s never stopped her from working hard for the life she wants. She’s come a long way from the small town where she grew up."
+  },
+  {
+    "id": "8",
+    "title": "Pride and Prejudice",
+    "author": "Jane Austen",
+    "price": 8.99,
+    "category": "Romance",
+    "cover": "pride_prejudice.jpg",
+    "file": "pride_prejudice.pdf",
+    "description": "Since its immediate success in 1813, Pride and Prejudice has remained one of the most popular novels in the English language."
+  },
+  {
+    "id": "9",
+    "title": "Atomic Habits",
+    "author": "James Clear",
+    "price": 15.99,
+    "category": "Business",
+    "cover": "atomic_habits.jpg",
+    "file": "atomic_habits.pdf",
+    "description": "No matter your goals, Atomic Habits offers a proven framework for improving--every day."
+  },
+  {
+    "id": "10",
+    "title": "Deep Work",
+    "author": "Cal Newport",
+    "price": 14.50,
+    "category": "Business",
+    "cover": "deep_work.jpg",
+    "file": "deep_work.pdf",
+    "description": "Deep work is the ability to focus without distraction on a cognitively demanding task. It's a skill that allows you to quickly master complicated information and produce better results in less time."
+  },
+  {
+    "id": "11",
+    "title": "The Subtle Art of Not Giving a F*ck",
+    "author": "Mark Manson",
+    "price": 13.50,
+    "category": "Self-Help",
+    "cover": "subtle_art.jpg",
+    "file": "subtle_art.pdf",
+    "description": "In this generation-defining self-help guide, a superstar blogger cuts through the crap to show us how to stop trying to be 'positive' all the time so that we can truly become better, happier people."
+  },
+  {
+    "id": "12",
+    "title": "Sapiens: A Brief History of Humankind",
+    "author": "Yuval Noah Harari",
+    "price": 19.99,
+    "category": "History",
+    "cover": "sapiens.jpg",
+    "file": "sapiens.pdf",
+    "description": "From a renowned historian comes a groundbreaking narrative of humanity’s creation and evolution—a #1 international bestseller."
+  },
+  {
+    "id": "13",
+    "title": "Steve Jobs",
+    "author": "Walter Isaacson",
+    "price": 17.99,
+    "category": "Biography",
+    "cover": "steve_jobs.jpg",
+    "file": "steve_jobs.pdf",
+    "description": "Based on more than forty interviews with Jobs conducted over two years—as well as interviews with more than a hundred family members, friends, adversaries, competitors, and colleagues."
+  },
+  {
+    "id": "14",
+    "title": "Becoming",
+    "author": "Michelle Obama",
+    "price": 18.50,
+    "category": "Biography",
+    "cover": "becoming.jpg",
+    "file": "becoming.pdf",
+    "description": "In a life filled with meaning and accomplishment, Michelle Obama has emerged as one of the most iconic and compelling women of our era."
+  },
+  {
+    "id": "15",
+    "title": "Clean Code",
+    "author": "Robert C. Martin",
+    "price": 29.99,
+    "category": "Tech",
+    "cover": "cleancode.jpg",
+    "file": "cleancode.pdf",
+    "description": "Even bad code can function. But if code isn't clean, it can bring a development organization to its knees."
+  },
+  {
+    "id": "16",
+    "title": "The Pragmatic Programmer",
+    "author": "Andrew Hunt",
+    "price": 27.99,
+    "category": "Tech",
+    "cover": "pragmatic_programmer.jpg",
+    "file": "pragmatic_programmer.pdf",
+    "description": "The Pragmatic Programmer is one of those rare tech books you’ll read, re-read, and read again over the years. Whether you’re new to the field or an experienced practitioner, you’ll come away with fresh insights."
+  },
+  {
+    "id": "17",
+    "title": "Salt, Fat, Acid, Heat",
+    "author": "Samin Nosrat",
+    "price": 22.00,
+    "category": "Cooking",
+    "cover": "salt_fat_acid_heat.jpg",
+    "file": "salt_fat_acid_heat.pdf",
+    "description": "A visionary new master class in cooking that distills decades of professional experience into just four simple elements."
+  },
+  {
+    "id": "18",
+    "title": "Vagabonding",
+    "author": "Rolf Potts",
+    "price": 11.50,
+    "category": "Travel",
+    "cover": "vagabonding.jpg",
+    "file": "vagabonding.pdf",
+    "description": "Vagabonding is about taking time off from your normal life—from six weeks to four months to two years—to discover and experience the world on your own terms."
+  },
+  {
+    "id": "19",
+    "title": "The Da Vinci Code",
+    "author": "Dan Brown",
+    "price": 10.99,
+    "category": "Thriller",
+    "cover": "davinci_code.jpg",
+    "file": "davinci_code.pdf",
+    "description": "While in Paris, Harvard symbologist Robert Langdon is awakened by a phone call in the dead of the night. The elderly curator of the Louvre has been murdered inside the museum, his body covered in baffling symbols."
+  },
+  {
+    "id": "20",
+    "title": "Harry Potter and the Sorcerer's Stone",
+    "author": "J.K. Rowling",
+    "price": 12.99,
+    "category": "Fantasy",
+    "cover": "harry_potter.jpg",
+    "file": "harry_potter.pdf",
+    "description": "Harry Potter has never even heard of Hogwarts when the letters start dropping on the doormat at number four, Privet Drive."
+  }
+]
