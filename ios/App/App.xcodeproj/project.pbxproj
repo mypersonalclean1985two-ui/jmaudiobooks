@@ -317,7 +317,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -326,7 +326,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jmaudiobooks.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jmaudiobooks.jmaudiobooks;
+				PROVISIONING_PROFILE_SPECIFIER = "bc145a22-9608-4800-8fd0-663229c94131";
+				DEVELOPMENT_TEAM = QY25P2CW87;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
