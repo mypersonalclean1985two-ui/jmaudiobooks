@@ -115,17 +115,12 @@ jobs:
             -exportPath output | tee xcodebuild_export.log
 
 
-      - name: Upload Build Logs on Failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: xcode-build-logs
-          path: ios/App/*.log
-
-
       - name: Upload Artifact
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ios-app-ipa
-          path: ios/App/output/App.ipa
+          path: |
+            ios/App/output/*.ipa
+            ios/App/*.log
+
