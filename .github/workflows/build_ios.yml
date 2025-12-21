@@ -37,8 +37,7 @@ jobs:
             -inkey private_key.pem \
             -in distribution.pem \
             -out build_certificate.p12 \
-            -passout pass:password \
-            -legacy
+            -passout pass:password
 
           echo "P12 Generated. Size:"
           ls -l build_certificate.p12
