@@ -22,23 +22,85 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Ensure Certificate files exist
+        run: |
+          ls -l private_key.pem
+          ls -l distribution.cer
+
+      - name: Assemble P12 on Runner
+        run: |
+          # Convert DER to PEM
+          openssl x509 -inform DER -in distribution.cer -out distribution.pem
+          
+          # Combine to P12
+          openssl pkcs12 -export \
+            -inkey private_key.pem \
+            -in distribution.pem \
+            -out build_certificate.p12 \
+            -passout pass:password \
+            -legacy
+
+          echo "P12 Generated. Size:"
+          ls -l build_certificate.p12
+
+      - name: Install Certificate and Profile
+        env:
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_BASE64 }}
+          KEYCHAIN_PASSWORD: "temporary_password"
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$PWD/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          # create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # import certificate to keychain
+          security import $CERTIFICATE_PATH -P "password" -A -t agg -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # apply provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
       - name: Sync Capacitor
         run: npx cap sync ios
 
-      - name: Build iOS App
-        uses: yukiarrr/ios-build-action@v1.12.0
-        with:
-          project-path: ios/App/App.xcodeproj
-          p12-base64: ${{ secrets.IOS_P12_BASE64 }}
-          mobileprovision-base64: ${{ secrets.IOS_PROVISION_BASE64 }}
-          code-signing-identity: "Apple Distribution"
-          team-id: "QY25P2CW87"
-          certificate-password: "password"
-          scheme: App
-          export-method: app-store
+      - name: Build xArchive
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath App.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="JM Audiobooks App Store" \
+            DEVELOPMENT_TEAM="QY25P2CW87" \
+            CODE_SIGN_IDENTITY="Apple Distribution"
+
+      - name: Export IPA
+        run: |
+          cd ios/App
+          # Create export options plist manually
+          /usr/libexec/PlistBuddy -c "Add :method string app-store" exportOptions.plist
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" exportOptions.plist
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:com.jmaudiobooks.app string JM Audiobooks App Store" exportOptions.plist
+          /usr/libexec/PlistBuddy -c "Add :signingStyle string manual" exportOptions.plist
+          /usr/libexec/PlistBuddy -c "Add :teamID string QY25P2CW87" exportOptions.plist
+
+          xcodebuild -exportArchive \
+            -archivePath App.xcarchive \
+            -exportOptionsPlist exportOptions.plist \
+            -exportPath output
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-app-ipa
-          path: output.ipa
+          path: ios/App/output/App.ipa
