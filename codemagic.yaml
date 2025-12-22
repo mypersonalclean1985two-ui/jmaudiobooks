@@ -55,7 +55,7 @@ workflows:
             <key>provisioningProfiles</key>
             <dict>
               <key>com.jmaudiobooks.jmaudiobooks</key>
-              <string>bc145a22-aaba-4800-9608-e8fd063229c9</string>
+              <string>JM Audiobooks App Store</string>
             </dict>
             <key>signingCertificate</key>
             <string>Apple Distribution</string>
