@@ -27,15 +27,26 @@ workflows:
           keychain add-certificates \
             --certificate signing/distribution.p12 \
             --certificate-password "$CM_CERTIFICATE_PASSWORD"
+          
+          # Verify keychain
+          security find-identity -v -p codesigning
             
           # Install Provisioning Profile
           PROFILE_UUID="bc145a22-aaba-4800-9608-e8fd063229c9"
           PROFILE_SRC="signing/JM_Audiobooks_App_Store.mobileprovision"
-          PROFILE_DST="$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          PROFILE_FOLDER="$HOME/Library/MobileDevice/Provisioning Profiles"
+          PROFILE_DST="$PROFILE_FOLDER/$PROFILE_UUID.mobileprovision"
           
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_FOLDER"
           cp "$PROFILE_SRC" "$PROFILE_DST"
-          echo "Installed profile: $PROFILE_UUID"
+          
+          # Debug: Verify profile installation
+          echo "Installed profile to: $PROFILE_DST"
+          ls -l "$PROFILE_FOLDER"
+          
+          # Debug: Read profile name using security tool
+          security cms -D -i "$PROFILE_DST" | grep -A 1 "Name"
+          security cms -D -i "$PROFILE_DST" | grep -A 1 "UUID"
 
       - name: Build and Archive
         script: |
