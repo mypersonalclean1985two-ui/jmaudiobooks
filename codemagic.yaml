@@ -69,7 +69,8 @@ workflows:
           # Note: Using .xcodeproj because no Podfile/Workspace was found
           xcode-project build-ipa \
             --project "ios/App/App.xcodeproj" \
-            --scheme "App"
+            --scheme "App" \
+            --archive-flags "PROVISIONING_PROFILE_SPECIFIER=bc145a22-aaba-4800-9608-e8fd063229c9 PRODUCT_BUNDLE_IDENTIFIER=com.jmaudiobooks.jmaudiobooks DEVELOPMENT_TEAM=QY25P2CW87 CODE_SIGN_STYLE=Manual"
 
     artifacts:
       - "build/ios/ipa/*.ipa"
