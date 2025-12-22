@@ -20,15 +20,35 @@ workflows:
         script: |
           keychain initialize
           
-          # Decode and add the P12 certificate
-          echo "$CM_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+          # Decode signing files using Python for safety
+          python3 -c "
+          import base64, os
+          
+          def decode_env(var_name, output_path):
+              try:
+                  data = os.environ.get(var_name, '')
+                  # Strip whitespace and newlines just in case
+                  clean_data = data.replace(' ', '').replace('\n', '').replace('\r', '')
+                  decoded = base64.b64decode(clean_data)
+                  with open(output_path, 'wb') as f:
+                      f.write(decoded)
+                  print(f'Successfully decoded {var_name} to {output_path}')
+              except Exception as e:
+                  print(f'Error decoding {var_name}: {str(e)}')
+                  exit(1)
+          
+          # Ensure directory exists
+          profile_dir = os.path.expanduser('~/Library/MobileDevice/Provisioning Profiles')
+          if not os.path.exists(profile_dir):
+              os.makedirs(profile_dir)
+              
+          decode_env('CM_CERTIFICATE', '/tmp/certificate.p12')
+          decode_env('CM_PROVISIONING_PROFILE', os.path.join(profile_dir, 'profile.mobileprovision'))
+          "
+          
           keychain add-certificates \
             --certificate /tmp/certificate.p12 \
             --certificate-password "$CM_CERTIFICATE_PASSWORD"
-            
-          # Set up provisioning profile
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$CM_PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
 
       - name: Set up code signing settings
         script: xcode-project use-profiles
