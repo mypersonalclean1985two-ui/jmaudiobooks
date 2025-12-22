@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
     const searchInput = document.getElementById('search-input');
     const modal = document.getElementById('book-modal');
     const closeBtn = document.querySelector('.close-btn');
@@ -99,7 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let stats = { streak: 7, weekMinutes: 214, completedBooks: 32 };
 
     // Auth State Listener
+    console.log("App: Registering onAuthStateChanged...");
     window.onAuthStateChanged = async (user) => {
+        console.log("App: onAuthStateChanged fired. User:", user ? user.email : 'None');
         if (user) {
             window.currentUser = user;
             console.log('Auth state changed: Logged in as', user.email);
@@ -929,8 +931,14 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (currentView === 'discover') renderDiscover();
         }
     });
+}
 
-});
+// Start Init
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
 
 // Modal Helper Functions (must be outside DOMContentLoaded so they're always available)
 window.showModal = function (modalId) {
