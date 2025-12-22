@@ -155,7 +155,10 @@ jobs:
         run: |
           echo "Creating Private Key File..."
           mkdir -p ~/.private_keys
-          echo "$APP_STORE_PRIVATE_KEY" > ~/.private_keys/AuthKey_$APP_STORE_KEY_ID.p8
+          echo "$APP_STORE_PRIVATE_KEY" | tr -d '\r' > ~/.private_keys/AuthKey_$APP_STORE_KEY_ID.p8
+          
+          echo "Checking Key File Size:"
+          ls -l ~/.private_keys/AuthKey_$APP_STORE_KEY_ID.p8
           
           echo "Uploading IPA to App Store Connect..."
           xcrun altool --upload-package ios/App/output/App.ipa \
