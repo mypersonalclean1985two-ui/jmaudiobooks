@@ -100,18 +100,37 @@ function initApp() {
 
     // Auth State Listener
     console.log("App: Registering onAuthStateChanged...");
+    // Auth State Listener
+    console.log("App: Registering onAuthStateChanged...");
     window.onAuthStateChanged = async (user) => {
         console.log("App: onAuthStateChanged fired. User:", user ? user.email : 'None');
         if (user) {
             window.currentUser = user;
             console.log('Auth state changed: Logged in as', user.email);
+
+            // Set initial values from Auth
             userProfile.name = user.displayName || 'User';
             userProfile.email = user.email;
             userProfile.image = user.photoURL;
             userProfile.isGuest = false;
 
-            // Fetch data from Firestore
+            // Fetch and prioritize Firestore data
             try {
+                // Fetch the actual profile from Firestore (source of truth for name)
+                const firestoreProfile = await window.firebaseHelpers.getUserProfile(user.uid);
+                if (firestoreProfile) {
+                    console.log("App: Found Firestore profile, updating name to:", firestoreProfile.displayName);
+                    if (firestoreProfile.displayName) {
+                        userProfile.name = firestoreProfile.displayName;
+                    }
+                    if (firestoreProfile.photoURL) {
+                        userProfile.image = firestoreProfile.photoURL;
+                    }
+                    if (firestoreProfile.bio) {
+                        userProfile.bio = firestoreProfile.bio;
+                    }
+                }
+
                 const remoteStats = await window.firebaseHelpers.getStats(user.uid);
                 if (remoteStats && remoteStats.lastUpdated) {
                     stats = { ...stats, ...remoteStats };

@@ -64,25 +64,36 @@ auth.onAuthStateChanged((user) => {
         console.log('User signed in:', user.email);
         window.currentUser = user;
 
-        // Initialize user document if it doesn't exist
+        // Initialize user document if it doesn't exist, OR update if it does but lacks info
         db.collection('users').doc(user.uid).get().then((doc) => {
+            const updates = {};
             if (!doc.exists) {
-                const userData = {
-                    email: user.email,
-                    displayName: user.displayName || 'Guest User',
-                    photoURL: user.photoURL || '',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                };
+                updates.email = user.email;
+                updates.displayName = user.displayName || 'User';
+                updates.photoURL = user.photoURL || '';
+                updates.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                db.collection('users').doc(user.uid).set(updates);
 
-                db.collection('users').doc(user.uid).set(userData).then(() => {
-                    // Initialize stats
-                    db.collection('users').doc(user.uid).collection('stats').doc('current').set({
-                        streak: 0,
-                        weekMinutes: 0,
-                        completedBooks: 0,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                // Initialize stats
+                db.collection('users').doc(user.uid).collection('stats').doc('current').set({
+                    streak: 0,
+                    weekMinutes: 0,
+                    completedBooks: 0,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 });
+            } else {
+                const data = doc.data();
+                // If the name in Firestore is generic but Auth has a real name (e.g. from Google), update it
+                if ((!data.displayName || data.displayName === 'User' || data.displayName === 'Guest User') && user.displayName) {
+                    updates.displayName = user.displayName;
+                }
+                if (!data.photoURL && user.photoURL) {
+                    updates.photoURL = user.photoURL;
+                }
+
+                if (Object.keys(updates).length > 0) {
+                    db.collection('users').doc(user.uid).update(updates);
+                }
             }
         });
     } else {
@@ -180,6 +191,15 @@ window.firebaseHelpers = {
         } catch (error) {
             console.error('Error signing out:', error);
             throw error;
+        }
+    },
+    getUserProfile: async (userId) => {
+        try {
+            const doc = await db.collection('users').doc(userId).get();
+            return doc.exists ? doc.data() : null;
+        } catch (error) {
+            console.error('Error getting user profile:', error);
+            return null;
         }
     },
     getBooks: async () => {
