@@ -5,10 +5,11 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       groups:
-        - app_store_credentials # Only for CM_CERTIFICATE_PASSWORD
+        - app_store_credentials
       vars:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
+        BUNDLE_ID: "com.jmaudiobooks.jmaudiobooks"
     scripts:
       - name: Install dependencies
         script: |
@@ -22,24 +23,23 @@ workflows:
         script: |
           keychain initialize
           
-          # 1. Import Certificate (P12) from repo
-          # standard password 'password' should be in CM_CERTIFICATE_PASSWORD var
+          # Import Certificate
           keychain add-certificates \
             --certificate signing/distribution.p12 \
             --certificate-password "$CM_CERTIFICATE_PASSWORD"
             
-          # 2. Install Provisioning Profile from repo
+          # Install Provisioning Profile
           PROFILE_UUID="bc145a22-aaba-4800-9608-e8fd063229c9"
           PROFILE_SRC="signing/JM_Audiobooks_App_Store.mobileprovision"
           PROFILE_DST="$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
           
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PROFILE_SRC" "$PROFILE_DST"
-          echo "Installed profile to $PROFILE_DST"
+          echo "Installed profile: $PROFILE_UUID"
 
-      - name: Build IPA
+      - name: Build and Archive
         script: |
-          # Create ExportOptions.plist for manual signing
+          # Create ExportOptions.plist
           cat > export_options.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -61,22 +61,27 @@ workflows:
           </dict>
           </plist>
           EOF
-          
-          # Force settings to match our manual signing artifacts
-          PROFILE_UUID="bc145a22-aaba-4800-9608-e8fd063229c9"
-          PROFILE_NAME="JM Audiobooks App Store"
-          BUNDLE_ID="com.jmaudiobooks.jmaudiobooks"
-          TEAM_ID="QY25P2CW87"
-          IDENTITY="Apple Distribution" # Matches the certificate CN
-          
-          # Build the iOS app
-          # Note: Using .xcodeproj because no Podfile/Workspace was found
-          xcode-project build-ipa \
-            --project "ios/App/App.xcodeproj" \
-            --scheme "App" \
-            --export-options-plist export_options.plist \
-            --archive-flags "PROVISIONING_PROFILE_SPECIFIER=$PROFILE_UUID"
+
+          # BUILD THE ARCHIVE
+          mkdir -p build/ios/xcarchive
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath build/ios/xcarchive/App.xcarchive \
+            -xcconfig ios/App/signing.xcconfig \
+            archive \
+            | xcpretty
+
+          # EXPORT THE IPA
+          mkdir -p build/ios/ipa
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/ios/xcarchive/App.xcarchive \
+            -exportOptionsPlist export_options.plist \
+            -exportPath build/ios/ipa \
+            | xcpretty
 
     artifacts:
       - "build/ios/ipa/*.ipa"
-      - "*.dSYM.zip"
+      - "build/ios/xcarchive/*.xcarchive"
