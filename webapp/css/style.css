@@ -22,23 +22,21 @@
 }
 
 body {
-    background-color: #1a1f2e;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background-color: #0f1419;
+    margin: 0;
+    padding: 0;
     min-height: 100vh;
     overflow: hidden
 }
 
 .app-container {
-    width: 375px;
-    height: 812px;
+    width: 100%;
+    max-width: 100vw;
+    height: 100vh;
     background: linear-gradient(180deg, #0f1419 0%, #1a1f2e 100%);
     position: relative;
-    overflow: hidden;
-    border-radius: 40px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .8);
-    /* iOS Safe Area Support */
+    overflow-y: auto;
+    overflow-x: hidden;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
 }
@@ -202,7 +200,7 @@ body {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    overflow: hidden;
+    OVERFLOW_MARK;
     line-height: 1.2;
 }
 
@@ -217,7 +215,7 @@ body {
     height: 4px;
     background-color: var(--bg-secondary);
     border-radius: 2px;
-    overflow: hidden;
+    OVERFLOW_MARK;
     margin-bottom: 8px
 }
 
@@ -302,9 +300,11 @@ body {
     color: var(--text-secondary);
     cursor: pointer;
     white-space: nowrap;
-    padding-bottom: 4px;
+    padding-bottom: 8px;
     border-bottom: 3px solid transparent;
-    transition: all .3s
+    transition: all .3s;
+    flex: 0 0 auto;
+    /* Prevent tabs from shrinking */
 }
 
 .tab.active {
@@ -330,10 +330,11 @@ body {
 }
 
 .books-grid.grid-layout {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    overflow-x: visible;
-    scroll-snap-type: none
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    width: 100%;
 }
 
 .book-card {
@@ -363,7 +364,7 @@ body {
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 2px;
-    overflow: hidden;
+    OVERFLOW_MARK;
     text-overflow: ellipsis;
     white-space: nowrap
 }
@@ -371,7 +372,7 @@ body {
 .book-author {
     font-size: .75rem;
     color: var(--text-secondary);
-    overflow: hidden;
+    OVERFLOW_MARK;
     text-overflow: ellipsis;
     white-space: nowrap
 }
@@ -839,152 +840,230 @@ input:checked+.slider:before {
 
 .sub-btn:hover {
     background: #2563eb;
-}/ *   A u t h e n t i c a t i o n   S t y l e s   * /  
- . a u t h - i n p u t   {  
-         w i d t h :   1 0 0 % ;  
-         p a d d i n g :   1 6 p x ;  
-         b a c k g r o u n d - c o l o r :   v a r ( - - b g - c a r d ) ;  
-         b o r d e r :   1 p x   s o l i d   v a r ( - - b o r d e r - c o l o r ) ;  
-         b o r d e r - r a d i u s :   1 2 p x ;  
-         c o l o r :   v a r ( - - t e x t - p r i m a r y ) ;  
-         f o n t - s i z e :   1 r e m ;  
-         o u t l i n e :   n o n e ;  
-         t r a n s i t i o n :   b o r d e r - c o l o r   0 . 2 s ,   b o x - s h a d o w   0 . 2 s ;  
- }  
-  
- . a u t h - i n p u t : f o c u s   {  
-         b o r d e r - c o l o r :   v a r ( - - a c c e n t - p r i m a r y ) ;  
-         b o x - s h a d o w :   0   0   0   2 p x   r g b a ( 2 4 5 ,   1 5 8 ,   1 1 ,   0 . 2 ) ;  
- }  
-  
- . p a s s w o r d - f i e l d - w r a p p e r   {  
-         p o s i t i o n :   r e l a t i v e ;  
-         d i s p l a y :   f l e x ;  
-         a l i g n - i t e m s :   c e n t e r ;  
- }  
-  
- . p a s s w o r d - t o g g l e - b t n   {  
-         p o s i t i o n :   a b s o l u t e ;  
-         r i g h t :   1 2 p x ;  
-         b a c k g r o u n d :   n o n e ;  
-         b o r d e r :   n o n e ;  
-         c o l o r :   v a r ( - - t e x t - s e c o n d a r y ) ;  
-         f o n t - s i z e :   1 . 2 r e m ;  
-         c u r s o r :   p o i n t e r ;  
-         p a d d i n g :   8 p x ;  
-         / *   L a r g e r   t o u c h   t a r g e t   * /  
- }  
-  
- . g o o g l e - s i g n i n - b t n   {  
-         w i d t h :   1 0 0 % ;  
-         d i s p l a y :   f l e x ;  
-         a l i g n - i t e m s :   c e n t e r ;  
-         j u s t i f y - c o n t e n t :   c e n t e r ;  
-         g a p :   1 2 p x ;  
-         b a c k g r o u n d - c o l o r :   # f f f f f f ;  
-         c o l o r :   # 3 3 3 3 3 3 ;  
-         f o n t - w e i g h t :   6 0 0 ;  
-         p a d d i n g :   1 4 p x ;  
-         b o r d e r :   n o n e ;  
-         b o r d e r - r a d i u s :   1 2 p x ;  
-         c u r s o r :   p o i n t e r ;  
-         f o n t - s i z e :   1 r e m ;  
-         t r a n s i t i o n :   t r a n s f o r m   0 . 1 s ;  
- }  
-  
- . g o o g l e - s i g n i n - b t n : a c t i v e   {  
-         t r a n s f o r m :   s c a l e ( 0 . 9 8 ) ;  
- }  
-  
- . g o o g l e - i c o n   {  
-         w i d t h :   2 4 p x ;  
-         h e i g h t :   2 4 p x ;  
- }  
-  
- . a u t h - d i v i d e r   {  
-         d i s p l a y :   f l e x ;  
-         a l i g n - i t e m s :   c e n t e r ;  
-         t e x t - a l i g n :   c e n t e r ;  
-         c o l o r :   v a r ( - - t e x t - s e c o n d a r y ) ;  
-         m a r g i n :   2 0 p x   0 ;  
-         f o n t - s i z e :   0 . 9 r e m ;  
- }  
-  
- . a u t h - d i v i d e r : : b e f o r e ,  
- . a u t h - d i v i d e r : : a f t e r   {  
-         c o n t e n t :   ' ' ;  
-         f l e x :   1 ;  
-         b o r d e r - b o t t o m :   1 p x   s o l i d   v a r ( - - b o r d e r - c o l o r ) ;  
- }  
-  
- . a u t h - d i v i d e r : : b e f o r e   {  
-         m a r g i n - r i g h t :   1 0 p x ;  
- }  
-  
- . a u t h - d i v i d e r : : a f t e r   {  
-         m a r g i n - l e f t :   1 0 p x ;  
- }  
-  
- . f o r g o t - p a s s w o r d - l i n k   {  
-         c o l o r :   v a r ( - - a c c e n t - p r i m a r y ) ;  
-         f o n t - s i z e :   0 . 9 r e m ;  
-         t e x t - d e c o r a t i o n :   n o n e ;  
- }  
-  
- / *   M o d a l   P o l i s h   * /  
- . m o d a l - c o n t e n t   {  
-         b a c k g r o u n d - c o l o r :   v a r ( - - b g - s e c o n d a r y )   ! i m p o r t a n t ;  
-         / *   E n s u r e   c o n t r a s t   * /  
-         b o x - s h a d o w :   0   2 5 p x   5 0 p x   - 1 2 p x   r g b a ( 0 ,   0 ,   0 ,   0 . 5 ) ;  
- }  
-  
- . p a s s w o r d - s t r e n g t h - c o n t a i n e r   {  
-         m a r g i n - t o p :   8 p x ;  
- }  
-  
- . p a s s w o r d - s t r e n g t h - b a r   {  
-         h e i g h t :   4 p x ;  
-         b a c k g r o u n d - c o l o r :   v a r ( - - b o r d e r - c o l o r ) ;  
-         b o r d e r - r a d i u s :   2 p x ;  
-         o v e r f l o w :   h i d d e n ;  
- }  
-  
- . p a s s w o r d - s t r e n g t h - f i l l   {  
-         h e i g h t :   1 0 0 % ;  
-         w i d t h :   0 ;  
-         t r a n s i t i o n :   w i d t h   0 . 3 s ,   b a c k g r o u n d - c o l o r   0 . 3 s ;  
- }  
-  
- . p a s s w o r d - s t r e n g t h - f i l l . w e a k   {  
-         w i d t h :   3 3 % ;  
-         b a c k g r o u n d - c o l o r :   # e f 4 4 4 4 ;  
- }  
-  
- . p a s s w o r d - s t r e n g t h - f i l l . m e d i u m   {  
-         w i d t h :   6 6 % ;  
-         b a c k g r o u n d - c o l o r :   # f 5 9 e 0 b ;  
- }  
-  
- . p a s s w o r d - s t r e n g t h - f i l l . s t r o n g   {  
-         w i d t h :   1 0 0 % ;  
-         b a c k g r o u n d - c o l o r :   # 1 0 b 9 8 1 ;  
- }  
-  
- . p a s s w o r d - s t r e n g t h - t e x t   {  
-         f o n t - s i z e :   0 . 8 r e m ;  
-         m a r g i n - t o p :   4 p x ;  
-         t e x t - a l i g n :   r i g h t ;  
- }  
-  
- . p a s s w o r d - s t r e n g t h - t e x t . w e a k   {  
-         c o l o r :   # e f 4 4 4 4 ;  
- }  
-  
- . p a s s w o r d - s t r e n g t h - t e x t . m e d i u m   {  
-         c o l o r :   # f 5 9 e 0 b ;  
- }  
-  
- . p a s s w o r d - s t r e n g t h - t e x t . s t r o n g   {  
-         c o l o r :   # 1 0 b 9 8 1 ;  
- }  
- 
+}
+
+/* Authentication Styles */  .auth-input  {
+          width:  100%;
+          padding:  16px;
+          background-color:  var(--bg-card);
+          border:  1px solid var(--border-color);
+          border-radius:  12px;
+          color:  var(--text-primary);
+          font-size:  1rem;
+          outline:  none;
+          transition:  border-color 0.2s,  box-shadow 0.2s;
+      
+}
+
+    .auth-input:focus  {
+          border-color:  var(--accent-primary);
+          box-shadow:  0 0 0 2px rgba(245,  158,  11,  0.2);
+      
+}
+
+    .password-field-wrapper  {
+          position:  relative;
+          display:  flex;
+          align-items:  center;
+      
+}
+
+    .password-toggle-btn  {
+          position:  absolute;
+          right:  12px;
+          background:  none;
+          border:  none;
+          color:  var(--text-secondary);
+          font-size:  1.2rem;
+          cursor:  pointer;
+          padding:  8px;
+          /* Larger touch target */  
+}
+
+    .google-signin-btn  {
+          width:  100%;
+          display:  flex;
+          align-items:  center;
+          justify-content:  center;
+          gap:  12px;
+          background-color:  #ffffff;
+          color:  #333333;
+          font-weight:  600;
+          padding:  14px;
+          border:  none;
+          border-radius:  12px;
+          cursor:  pointer;
+          font-size:  1rem;
+          transition:  transform 0.1s;
+      
+}
+
+    .google-signin-btn:active  {
+          transform:  scale(0.98);
+      
+}
+
+    .google-icon  {
+          width:  24px;
+          height:  24px;
+      
+}
+
+    .auth-divider  {
+          display:  flex;
+          align-items:  center;
+          text-align:  center;
+          color:  var(--text-secondary);
+          margin:  20px 0;
+          font-size:  0.9rem;
+      
+}
+
+    .auth-divider::before,
+  .auth-divider::after  {
+          content:  '' ;
+          flex:  1;
+          border-bottom:  1px solid var(--border-color);
+      
+}
+
+    .auth-divider::before  {
+          margin-right:  10px;
+      
+}
+
+    .auth-divider::after  {
+          margin-left:  10px;
+      
+}
+
+    .forgot-password-link  {
+          color:  var(--accent-primary);
+          font-size:  0.9rem;
+          text-decoration:  none;
+      
+}
+
+    /* Modal Polish */  .modal-content  {
+          background-color:  var(--bg-secondary)  !important;
+          /* Ensure contrast */      box-shadow:  0 25px 50px -12px rgba(0,  0,  0,  0.5);
+      
+}
+
+    .password-strength-container  {
+          margin-top:  8px;
+      
+}
+
+    .password-strength-bar  {
+          height:  4px;
+          background-color:  var(--border-color);
+          border-radius:  2px;
+          overflow:  hidden;
+      
+}
+
+    .password-strength-fill  {
+          height:  100%;
+          width:  0;
+          transition:  width 0.3s,  background-color 0.3s;
+      
+}
+
+    .password-strength-fill.weak  {
+          width:  33%;
+          background-color:  #ef4444;
+      
+}
+
+    .password-strength-fill.medium  {
+          width:  66%;
+          background-color:  #f59e0b;
+      
+}
+
+    .password-strength-fill.strong  {
+          width:  100%;
+          background-color:  #10b981;
+      
+}
+
+    .password-strength-text  {
+          font-size:  0.8rem;
+          margin-top:  4px;
+          text-align:  right;
+      
+}
+
+    .password-strength-text.weak  {
+          color:  #ef4444;
+      
+}
+
+    .password-strength-text.medium  {
+          color:  #f59e0b;
+      
+}
+
+    .password-strength-text.strong  {
+          color:  #10b981;
+      
+}
+
+  
+/* Navigation & Back Button */
+.nav-back-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 0 20px;
+    z-index: 60;
+}
+
+.nav-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: var(--shadow);
+}
+
+.nav-back-btn:active {
+    transform: scale(0.9);
+    background: var(--border-color);
+}
+
+.nav-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.section-header-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.tabs-container {
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 0 20px 5px;
+    gap: 20px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tabs-container::-webkit-scrollbar {
+    display: none;
+}

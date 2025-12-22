@@ -562,13 +562,30 @@ function initApp() {
     }
 
     function renderHome() {
+        // Restore standard header if we came back from a sub-page
+        const topBar = document.querySelector('.top-bar');
+        if (topBar) {
+            const backContainer = topBar.querySelector('.nav-back-container');
+            if (backContainer) backContainer.remove();
+            const header = topBar.querySelector('.top-bar-header');
+            if (header) header.style.display = 'flex';
+            const titleEl = topBar.querySelector('.app-title');
+            if (titleEl) titleEl.style.display = 'block';
+        }
+
         const currentBook = books.find(b => b.id === currentlyReading?.bookId);
-        mainContent.innerHTML = `<div class="section-title">CONTINUE READING</div><div class="continue-reading-card" onclick="resumeReading()"><img src="${currentBook ? getCoverUrl(currentBook) : 'placeholder.svg'}" class="continue-reading-cover" alt="${currentBook?.title || 'Book'}" onerror="this.src='placeholder.svg'"><div class="continue-reading-info"><div><div class="continue-reading-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${currentBook?.title || 'No Book'}</div><div class="continue-reading-author">${currentBook?.author || ''}</div></div><div><div class="progress-bar"><div class="progress-fill" style="width:${currentlyReading?.progress || 0}%"></div></div><div class="progress-text">Chapter ${currentlyReading?.chapter || 0} of ${currentlyReading?.totalChapters || 0} - ${currentlyReading?.progress || 0}% completed</div><button class="resume-btn" onclick="event.stopPropagation();resumeReading();">Resume</button></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-label">Streak</div><div class="stat-value">${stats.streak} days</div></div><div class="stat-card"><div class="stat-icon">🕐</div><div class="stat-label">This week</div><div class="stat-value">${stats.weekMinutes} min</div></div><div class="stat-card"><div class="stat-icon">✓</div><div class="stat-label">Completed</div><div class="stat-value">${stats.completedBooks} books</div></div></div><div class="tabs-container" style="overflow-x: auto; white-space: nowrap; padding-bottom: 5px;"><div class="tab active" data-category="all">All Books</div><div class="tab" data-category="Fiction">Fiction</div><div class="tab" data-category="Sci-Fi">Sci-Fi</div><div class="tab" data-category="Mystery">Mystery</div><div class="tab" data-category="Romance">Romance</div><div class="tab" data-category="History">History</div><div class="tab" data-category="Business">Business</div><div class="tab" data-category="Thriller">Thriller</div><div class="tab" data-category="Biography">Biography</div></div><div class="books-grid" id="books-grid" style="display: flex; overflow-x: auto; gap: 16px; padding-bottom: 16px; margin-bottom: 32px;"></div><div class="section-header"><div class="section-header-title">Recommended</div><div class="see-all">See all ›</div></div><div class="books-grid grid-layout" id="recommended-grid" style="display: flex; overflow-x: auto; gap: 16px; padding-bottom: 16px; margin-bottom: 32px;"></div>`;
+        mainContent.innerHTML = `<div class="section-title">CONTINUE READING</div><div class="continue-reading-card" onclick="resumeReading()"><img src="${currentBook ? getCoverUrl(currentBook) : 'placeholder.svg'}" class="continue-reading-cover" alt="${currentBook?.title || 'Book'}" onerror="this.src='placeholder.svg'"><div class="continue-reading-info"><div><div class="continue-reading-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${currentBook?.title || 'No Book'}</div><div class="continue-reading-author">${currentBook?.author || ''}</div></div><div><div class="progress-bar"><div class="progress-fill" style="width:${currentlyReading?.progress || 0}%"></div></div><div class="progress-text">Chapter ${currentlyReading?.chapter || 0} of ${currentlyReading?.totalChapters || 0} - ${currentlyReading?.progress || 0}% completed</div><button class="resume-btn" onclick="event.stopPropagation();resumeReading();">Resume</button></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-label">Streak</div><div class="stat-value">${stats.streak} days</div></div><div class="stat-card"><div class="stat-icon">🕐</div><div class="stat-label">This week</div><div class="stat-value">${stats.weekMinutes} min</div></div><div class="stat-card"><div class="stat-icon">✓</div><div class="stat-label">Completed</div><div class="stat-value">${stats.completedBooks} books</div></div></div><div class="tabs-container"><div class="tab active" data-category="all">All Books</div><div class="tab" data-category="Fiction">Fiction</div><div class="tab" data-category="Sci-Fi">Sci-Fi</div><div class="tab" data-category="Mystery">Mystery</div><div class="tab" data-category="Romance">Romance</div><div class="tab" data-category="History">History</div><div class="tab" data-category="Business">Business</div><div class="tab" data-category="Thriller">Thriller</div><div class="tab" data-category="Biography">Biography</div></div><div class="books-grid" id="books-grid"></div><div class="section-header"><div class="section-header-title">Recommended</div><div class="see-all">See all ›</div></div><div class="books-grid grid-layout" id="recommended-grid"></div>`;
         renderBooksGrid(books.slice(0, 9), document.getElementById('books-grid'));
         renderBooksGrid(books.slice(9, 15), document.getElementById('recommended-grid'));
 
         setupTabs();
         setupSeeAll();
+
+        // Enhance scrolling
+        if (window.CategoryEnhance) {
+            window.CategoryEnhance.initHorizontalScroll('.books-grid');
+            window.CategoryEnhance.initHorizontalScroll('.tabs-container');
+        }
     }
 
     function setupTabs() {
@@ -613,13 +630,21 @@ function initApp() {
     }
 
     function renderDiscover() {
+        if (window.CategoryEnhance) {
+            window.CategoryEnhance.renderBackButton('Discover Books', () => renderHome());
+        }
+
         mainContent.innerHTML = `
             <div class="section-header">
-                <div class="section-header-title">Discover Audiobooks</div>
+                <div class="section-header-title">All Categories</div>
             </div>
             <div class="books-grid grid-layout" id="discover-grid"></div>
         `;
         renderBooksGrid(books, document.getElementById('discover-grid'));
+
+        if (window.CategoryEnhance) {
+            window.CategoryEnhance.initHorizontalScroll('.books-grid');
+        }
     }
 
     function renderLibrary() {
@@ -627,6 +652,9 @@ function initApp() {
     }
 
     function renderProfile() {
+        if (window.CategoryEnhance) {
+            window.CategoryEnhance.renderBackButton('My Profile', () => renderHome());
+        }
         const avatarHtml = userProfile.image
             ? `<img src="${userProfile.image}" class="profile-avatar">`
             : `<div class="profile-placeholder">${userProfile.name.charAt(0).toUpperCase()}</div>`;
