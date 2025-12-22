@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jm-books-v1';
+const CACHE_NAME = 'jm-books-v2';
 const ASSETS = [
     '/',
     '/index.html',
