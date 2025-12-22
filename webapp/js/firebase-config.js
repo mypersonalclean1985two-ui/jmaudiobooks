@@ -10,14 +10,20 @@ const firebaseConfig = {
 
 // Initialize Firebase
 console.log("Firebase: Starting initialization...");
-try {
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-        console.log("Firebase: Initialization successful.");
+if (typeof firebase === 'undefined') {
+    console.error("Firebase SDK not found! Local load failed.");
+    alert("System Error: Firebase SDK could not be loaded locally. This usually means the app files are corrupted or the internal server is blocked. Please try restarting the app.");
+    // Stop execution here or provide fallbacks
+} else {
+    try {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+            console.log("Firebase: Initialization successful.");
+        }
+    } catch (e) {
+        console.error("Firebase: Initialization failed!", e);
+        alert("Firebase Init Error: " + e.message);
     }
-} catch (e) {
-    console.error("Firebase: Initialization failed!", e);
-    alert("Firebase Init Error: " + e.message);
 }
 
 const auth = firebase.auth();
