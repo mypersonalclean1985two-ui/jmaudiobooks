@@ -1,86 +1,55 @@
 workflows:
   ios-release:
     name: iOS Release
+    max_build_duration: 120
+    instance_type: mac_mini_m2
     environment:
-      xcode: latest # Uses the latest stable Xcode version
-      node: latest  # Uses the latest stable Node.js version
       groups:
-        - app_store_credentials # You need to create this group in CodeMagic UI variables
+        - app_store_credentials # Only for CM_CERTIFICATE_PASSWORD
+      vars:
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
     scripts:
-      - name: Install npm dependencies
-        script: npm install
-
+      - name: Install dependencies
+        script: |
+          npm install
+          
       - name: Sync Capacitor
-        script: npx cap sync ios
-
-      - name: Initialize Keychain
-        script: keychain initialize
+        script: |
+          npx cap sync ios
 
       - name: Set up code signing
         script: |
           keychain initialize
           
-          # Decode signing files using Python for safety
-          python3 -c "
-          import base64, os
-          
-          def decode_env(var_name, output_path):
-              try:
-                  data = os.environ.get(var_name, '')
-                  # Strip whitespace and newlines just in case
-                  clean_data = data.replace(' ', '').replace('\n', '').replace('\r', '')
-                  decoded = base64.b64decode(clean_data)
-                  with open(output_path, 'wb') as f:
-                      f.write(decoded)
-                  print(f'Successfully decoded {var_name} to {output_path}')
-              except Exception as e:
-                  print(f'Error decoding {var_name}: {str(e)}')
-                  exit(1)
-          
-          # Ensure directory exists
-          profile_dir = os.path.expanduser('~/Library/MobileDevice/Provisioning Profiles')
-          if not os.path.exists(profile_dir):
-              os.makedirs(profile_dir)
-              
-          decode_env('CM_CERTIFICATE', '/tmp/certificate.p12')
-          
-          # Copy provisioning profile from repo source to UUID filename
-          import shutil
-          repo_profile = 'ios/JM_Audiobooks_App_Store.mobileprovision'
-          # Use the known UUID for the filename
-          dest_profile = os.path.join(profile_dir, 'bc145a22-aaba-4800-9608-e8fd063229c9.mobileprovision')
-          try:
-              shutil.copy(repo_profile, dest_profile)
-              print(f'Successfully copied {repo_profile} to {dest_profile}')
-          except Exception as e:
-              print(f'Error copying profile: {e}')
-              exit(1)
-          "
-          
+          # 1. Import Certificate (P12) from repo
+          # standard password 'password' should be in CM_CERTIFICATE_PASSWORD var
           keychain add-certificates \
-            --certificate /tmp/certificate.p12 \
+            --certificate signing/distribution.p12 \
             --certificate-password "$CM_CERTIFICATE_PASSWORD"
-
-      - name: Set up code signing settings
-        script: xcode-project use-profiles
+            
+          # 2. Install Provisioning Profile from repo
+          PROFILE_UUID="bc145a22-aaba-4800-9608-e8fd063229c9"
+          PROFILE_SRC="signing/JM_Audiobooks_App_Store.mobileprovision"
+          PROFILE_DST="$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_SRC" "$PROFILE_DST"
+          echo "Installed profile to $PROFILE_DST"
 
       - name: Build IPA
         script: |
-          # Build the iOS app
-          # Note: Using .xcodeproj because no Podfile/Workspace was found
+          # Force settings to match our manual signing artifacts
+          PROFILE_UUID="bc145a22-aaba-4800-9608-e8fd063229c9"
+          BUNDLE_ID="com.jmaudiobooks.jmaudiobooks"
+          TEAM_ID="QY25P2CW87"
+          IDENTITY="Apple Distribution" # Matches the certificate CN
+          
           xcode-project build-ipa \
-            --project "ios/App/App.xcodeproj" \
+            --workspace "ios/App/App.xcworkspace" \
             --scheme "App" \
-            --archive-flags "PROVISIONING_PROFILE_SPECIFIER='JM Audiobooks App Store' PRODUCT_BUNDLE_IDENTIFIER=com.jmaudiobooks.jmaudiobooks DEVELOPMENT_TEAM=QY25P2CW87 CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution'"
+            --archive-flags "PROVISIONING_PROFILE_SPECIFIER=$PROFILE_UUID PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID DEVELOPMENT_TEAM=$TEAM_ID CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='$IDENTITY'"
 
     artifacts:
       - "build/ios/ipa/*.ipa"
-      - "/tmp/xcodebuild_logs/*.log"
       - "*.dSYM.zip"
-
-    publishing:
-      app_store_connect:
-        # Use the API Key variables for publishing
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
