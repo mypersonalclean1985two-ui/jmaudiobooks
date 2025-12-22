@@ -16,15 +16,19 @@ workflows:
       - name: Initialize Keychain
         script: keychain initialize
 
-      - name: Fetch Signing Files
+      - name: Set up code signing
         script: |
-          # Automatically fetch or create signing certificates and profiles
-          # Requires APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID
-          app-store-connect fetch-signing-files "com.jmaudiobooks.jmaudiobooks" \
-            --type IOS_APP_STORE \
-            --create
+          keychain initialize
           
-          keychain add-certificates
+          # Decode and add the P12 certificate
+          echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
+          keychain add-certificates \
+            --certificate /tmp/certificate.p12 \
+            --certificate-password "$CM_CERTIFICATE_PASSWORD"
+            
+          # Set up provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo $CM_PROVISIONING_PROFILE | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
 
       - name: Set up code signing settings
         script: xcode-project use-profiles
