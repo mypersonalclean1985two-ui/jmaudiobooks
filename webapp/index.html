@@ -13,6 +13,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="JM Audiobooks">
+
+    <!-- Firebase SDKs (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+
+    <!-- App Config & Initializers -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/category-utils.js"></script>
+    <script src="js/category-enhance.js"></script>
 </head>
 
 <body>
@@ -233,20 +244,8 @@
     </div>
     </div>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
-    <!-- Category utilities -->
-    <script src="js/category-utils.js"></script>
-    <script src="js/category-enhance.js"></script>
-
-
-    <!-- Config -->
-    <script src="js/firebase-config.js"></script>
-
-    <script src="js/app.js?v=8.0"></script>
+    <!-- Main Application Logic -->
+    <script src="js/app.js?v=9.0"></script>
 
     <script>
         if ('serviceWorker' in navigator) {
