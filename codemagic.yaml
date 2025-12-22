@@ -44,10 +44,11 @@ workflows:
               
           decode_env('CM_CERTIFICATE', '/tmp/certificate.p12')
           
-          # Copy provisioning profile from repo source
+          # Copy provisioning profile from repo source to UUID filename
           import shutil
           repo_profile = 'ios/JM_Audiobooks_App_Store.mobileprovision'
-          dest_profile = os.path.join(profile_dir, 'profile.mobileprovision')
+          # Use the known UUID for the filename
+          dest_profile = os.path.join(profile_dir, 'bc145a22-aaba-4800-9608-e8fd063229c9.mobileprovision')
           try:
               shutil.copy(repo_profile, dest_profile)
               print(f'Successfully copied {repo_profile} to {dest_profile}')
@@ -70,7 +71,7 @@ workflows:
           xcode-project build-ipa \
             --project "ios/App/App.xcodeproj" \
             --scheme "App" \
-            --archive-flags "PROVISIONING_PROFILE_SPECIFIER=bc145a22-aaba-4800-9608-e8fd063229c9 PRODUCT_BUNDLE_IDENTIFIER=com.jmaudiobooks.jmaudiobooks DEVELOPMENT_TEAM=QY25P2CW87 CODE_SIGN_STYLE=Manual"
+            --archive-flags "PROVISIONING_PROFILE_SPECIFIER='JM Audiobooks App Store' PRODUCT_BUNDLE_IDENTIFIER=com.jmaudiobooks.jmaudiobooks DEVELOPMENT_TEAM=QY25P2CW87 CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution'"
 
     artifacts:
       - "build/ios/ipa/*.ipa"
