@@ -165,25 +165,25 @@ document.addEventListener('DOMContentLoaded', () => {
     function createEnhancedLoginModal() {
         const modalHtml = `
         <div id="login-modal" class="modal" style="display:none;">
-            <div class="modal-content" style="max-width: 400px; height: auto; border-radius: 24px; padding: 24px;">
+            <div class="modal-content">
                  <span class="close-btn" id="close-login-modal">&times;</span>
-                <h2 id="auth-title" style="text-align:center; color:var(--text-primary); margin-bottom:24px;">Log In</h2>
+                <h2 id="auth-title">Log In</h2>
                 <div style="display:flex;flex-direction:column;gap:16px;">
                     <!-- Name Field (only for signup) -->
                     <div id="name-field" style="display:none;">
-                        <label style="display:block;margin-bottom:8px;color:var(--text-secondary);font-size:0.9rem;">Name</label>
+                        <label style="display:block;margin-bottom:8px;color:rgba(255,255,255,0.6);font-size:0.9rem;">Name</label>
                         <input type="text" id="login-name" class="auth-input" placeholder="Your Name">
                     </div>
                     
                     <!-- Email Field -->
                     <div>
-                        <label style="display:block;margin-bottom:8px;color:var(--text-secondary);font-size:0.9rem;">Email</label>
+                        <label style="display:block;margin-bottom:8px;color:rgba(255,255,255,0.6);font-size:0.9rem;">Email Address</label>
                         <input type="email" id="login-email" class="auth-input" placeholder="you@example.com">
                     </div>
                     
                     <!-- Password Field with Toggle -->
                     <div>
-                        <label style="display:block;margin-bottom:8px;color:var(--text-secondary);font-size:0.9rem;">Password</label>
+                        <label style="display:block;margin-bottom:8px;color:rgba(255,255,255,0.6);font-size:0.9rem;">Password</label>
                         <div class="password-field-wrapper">
                             <input type="password" id="login-password" class="auth-input" placeholder="••••••••">
                             <button type="button" class="password-toggle-btn" id="toggle-password">👁️</button>
@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     
                     <!-- Submit Button -->
-                    <button id="perform-auth-btn" class="btn-primary" style="width:100%; padding: 16px; font-size: 1.1rem;">Log In</button>
+                    <button id="perform-auth-btn" class="btn-primary">Log In</button>
                     
                     <!-- Error Message -->
                     <div id="auth-error" style="color:#ef4444;display:none;font-size:0.9rem;padding:12px;background:rgba(239,68,68,0.1);border-radius:12px; text-align:center;"></div>
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div id="auth-success" style="display:none;" class="auth-success-message"></div>
                     
                     <!-- Divider -->
-                    <div class="auth-divider">OR</div>
+                    <div class="auth-divider">SECURE SOCIAL LOGIN</div>
                     
                     <!-- Google Sign-In Button -->
                     <button id="google-signin-btn" class="google-signin-btn">

@@ -29,6 +29,16 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
         console.error('Error setting persistence:', error);
     });
 
+// Handle Redirect Results (Crucial for Mobile/Capacitor)
+auth.getRedirectResult()
+    .then((result) => {
+        if (result.user) {
+            console.log("Logged in via redirect:", result.user.email);
+        }
+    }).catch((error) => {
+        console.error("Auth redirect error:", error);
+    });
+
 // Export for use in other files
 window.firebaseAuth = auth;
 window.firebaseDB = db;
@@ -44,9 +54,6 @@ auth.onAuthStateChanged((user) => {
         // Initialize user document if it doesn't exist
         db.collection('users').doc(user.uid).get().then((doc) => {
             if (!doc.exists) {
-                // Use the user object directly, but prioritize the passed displayName if available (though it might not be updated yet in the user object)
-                // Better to just set what we have and let the profile update handle the rest if needed.
-                // Actually, for sign up, we update profile *before* this listener might fully process, but to be safe:
                 const userData = {
                     email: user.email,
                     displayName: user.displayName || 'Guest User',
@@ -87,7 +94,7 @@ window.firebaseHelpers = {
     signInWithGoogle: async () => {
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
-            await auth.signInWithPopup(provider);
+            await auth.signInWithRedirect(provider);
         } catch (error) {
             console.error('Error signing in with Google:', error);
             throw error;
@@ -98,7 +105,7 @@ window.firebaseHelpers = {
         provider.addScope('email');
         provider.addScope('name');
         try {
-            await auth.signInWithPopup(provider);
+            await auth.signInWithRedirect(provider);
         } catch (error) {
             console.error('Error signing in with Apple:', error);
             throw error;

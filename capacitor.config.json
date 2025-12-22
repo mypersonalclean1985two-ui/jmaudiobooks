@@ -4,6 +4,13 @@
   "webDir": "webapp",
   "server": {
     "url": "https://book-258ee.web.app",
-    "cleartext": true
+    "cleartext": true,
+    "allowNavigation": [
+      "book-258ee.web.app",
+      "*.firebaseapp.com",
+      "*.google.com",
+      "*.apple.com",
+      "appleid.apple.com"
+    ]
   }
 }
