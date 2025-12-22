@@ -842,182 +842,186 @@ input:checked+.slider:before {
     background: #2563eb;
 }
 
-/* Authentication Styles */  .auth-input  {
-          width:  100%;
-          padding:  16px;
-          background-color:  var(--bg-card);
-          border:  1px solid var(--border-color);
-          border-radius:  12px;
-          color:  var(--text-primary);
-          font-size:  1rem;
-          outline:  none;
-          transition:  border-color 0.2s,  box-shadow 0.2s;
-      
+/* Authentication Styles */
+.auth-input {
+    width: 100%;
+    padding: 16px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
 }
 
-    .auth-input:focus  {
-          border-color:  var(--accent-primary);
-          box-shadow:  0 0 0 2px rgba(245,  158,  11,  0.2);
-      
+.auth-input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+
 }
 
-    .password-field-wrapper  {
-          position:  relative;
-          display:  flex;
-          align-items:  center;
-      
+.password-field-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
 }
 
-    .password-toggle-btn  {
-          position:  absolute;
-          right:  12px;
-          background:  none;
-          border:  none;
-          color:  var(--text-secondary);
-          font-size:  1.2rem;
-          cursor:  pointer;
-          padding:  8px;
-          /* Larger touch target */  
+.password-toggle-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 8px;
+    /* Larger touch target */
 }
 
-    .google-signin-btn  {
-          width:  100%;
-          display:  flex;
-          align-items:  center;
-          justify-content:  center;
-          gap:  12px;
-          background-color:  #ffffff;
-          color:  #333333;
-          font-weight:  600;
-          padding:  14px;
-          border:  none;
-          border-radius:  12px;
-          cursor:  pointer;
-          font-size:  1rem;
-          transition:  transform 0.1s;
-      
+.google-signin-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background-color: #ffffff;
+    color: #333333;
+    font-weight: 600;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: transform 0.1s;
+
 }
 
-    .google-signin-btn:active  {
-          transform:  scale(0.98);
-      
+.google-signin-btn:active {
+    transform: scale(0.98);
+
 }
 
-    .google-icon  {
-          width:  24px;
-          height:  24px;
-      
+.google-icon {
+    width: 24px;
+    height: 24px;
+
 }
 
-    .auth-divider  {
-          display:  flex;
-          align-items:  center;
-          text-align:  center;
-          color:  var(--text-secondary);
-          margin:  20px 0;
-          font-size:  0.9rem;
-      
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-secondary);
+    margin: 20px 0;
+    font-size: 0.9rem;
+
 }
 
-    .auth-divider::before,
-  .auth-divider::after  {
-          content:  '' ;
-          flex:  1;
-          border-bottom:  1px solid var(--border-color);
-      
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+
 }
 
-    .auth-divider::before  {
-          margin-right:  10px;
-      
+.auth-divider::before {
+    margin-right: 10px;
+
 }
 
-    .auth-divider::after  {
-          margin-left:  10px;
-      
+.auth-divider::after {
+    margin-left: 10px;
+
 }
 
-    .forgot-password-link  {
-          color:  var(--accent-primary);
-          font-size:  0.9rem;
-          text-decoration:  none;
-      
+.forgot-password-link {
+    color: var(--accent-primary);
+    font-size: 0.9rem;
+    text-decoration: none;
+
 }
 
-    /* Modal Polish */  .modal-content  {
-          background-color:  var(--bg-secondary)  !important;
-          /* Ensure contrast */      box-shadow:  0 25px 50px -12px rgba(0,  0,  0,  0.5);
-      
+/* Modal Polish */
+.modal-content {
+    background-color: var(--bg-secondary) !important;
+    /* Ensure contrast */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+
 }
 
-    .password-strength-container  {
-          margin-top:  8px;
-      
+.password-strength-container {
+    margin-top: 8px;
+
 }
 
-    .password-strength-bar  {
-          height:  4px;
-          background-color:  var(--border-color);
-          border-radius:  2px;
-          overflow:  hidden;
-      
+.password-strength-bar {
+    height: 4px;
+    background-color: var(--border-color);
+    border-radius: 2px;
+    overflow: hidden;
+
 }
 
-    .password-strength-fill  {
-          height:  100%;
-          width:  0;
-          transition:  width 0.3s,  background-color 0.3s;
-      
+.password-strength-fill {
+    height: 100%;
+    width: 0;
+    transition: width 0.3s, background-color 0.3s;
+
 }
 
-    .password-strength-fill.weak  {
-          width:  33%;
-          background-color:  #ef4444;
-      
+.password-strength-fill.weak {
+    width: 33%;
+    background-color: #ef4444;
+
 }
 
-    .password-strength-fill.medium  {
-          width:  66%;
-          background-color:  #f59e0b;
-      
+.password-strength-fill.medium {
+    width: 66%;
+    background-color: #f59e0b;
+
 }
 
-    .password-strength-fill.strong  {
-          width:  100%;
-          background-color:  #10b981;
-      
+.password-strength-fill.strong {
+    width: 100%;
+    background-color: #10b981;
+
 }
 
-    .password-strength-text  {
-          font-size:  0.8rem;
-          margin-top:  4px;
-          text-align:  right;
-      
+.password-strength-text {
+    font-size: 0.8rem;
+    margin-top: 4px;
+    text-align: right;
+
 }
 
-    .password-strength-text.weak  {
-          color:  #ef4444;
-      
+.password-strength-text.weak {
+    color: #ef4444;
+
 }
 
-    .password-strength-text.medium  {
-          color:  #f59e0b;
-      
+.password-strength-text.medium {
+    color: #f59e0b;
+
 }
 
-    .password-strength-text.strong  {
-          color:  #10b981;
-      
+.password-strength-text.strong {
+    color: #10b981;
+
 }
 
-  
+
 /* Navigation & Back Button */
 .nav-back-container {
     display: flex;
     align-items: center;
     gap: 12px;
     margin-bottom: 24px;
-    padding: 0 20px;
+    padding: 20px 20px 0;
+    /* Lowered down */
     z-index: 60;
 }
 
@@ -1025,13 +1029,14 @@ input:checked+.slider:before {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 64px;
+    height: 64px;
     background: var(--bg-card);
-    border-radius: 12px;
+    border-radius: 16px;
     border: 1px solid var(--border-color);
     color: var(--text-primary);
-    font-size: 1.4rem;
+    font-size: 2.22rem;
+    /* Much larger arrow */
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: var(--shadow);
@@ -1067,6 +1072,7 @@ input:checked+.slider:before {
 .tabs-container::-webkit-scrollbar {
     display: none;
 }
+
 .discovery-container {
     padding-bottom: 40px;
 }
