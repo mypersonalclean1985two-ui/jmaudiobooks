@@ -83,7 +83,6 @@ workflows:
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
             -archivePath build/ios/xcarchive/App.xcarchive \
-            -xcconfig ios/App/signing.xcconfig \
             archive
 
           # EXPORT THE IPA
