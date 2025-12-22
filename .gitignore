@@ -29,6 +29,8 @@ npm-debug.log*
 *.p12
 *.pem
 *.mobileprovision
+!signing/*.p12
+!signing/*.mobileprovision
 *.cer
 *.certSigningRequest
 SECRETS_TO_ADD.txt
