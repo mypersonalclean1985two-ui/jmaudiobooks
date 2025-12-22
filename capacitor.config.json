@@ -1,5 +1,9 @@
 {
   "appId": "com.jmaudiobooks.jmaudiobooks",
   "appName": "JM Audiobooks",
-  "webDir": "webapp"
+  "webDir": "webapp",
+  "server": {
+    "url": "https://book-258ee.web.app",
+    "cleartext": true
+  }
 }
