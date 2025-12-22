@@ -47,6 +47,11 @@ workflows:
           # Debug: Read profile name using security tool
           security cms -D -i "$PROFILE_DST" | grep -A 1 "Name"
           security cms -D -i "$PROFILE_DST" | grep -A 1 "UUID"
+          
+      - name: Set build number
+        script: |
+          # Use CodeMagic build number for the archive (must be unique for Apple)
+          agvtool new-version -all $(($BUILD_NUMBER))
 
       - name: Build and Archive
         script: |
