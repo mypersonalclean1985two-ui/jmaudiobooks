@@ -9,8 +9,15 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+console.log("Firebase: Starting initialization...");
+try {
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log("Firebase: Initialization successful.");
+    }
+} catch (e) {
+    console.error("Firebase: Initialization failed!", e);
+    alert("Firebase Init Error: " + e.message);
 }
 
 const auth = firebase.auth();
