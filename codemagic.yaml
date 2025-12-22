@@ -74,7 +74,6 @@ workflows:
           xcode-project build-ipa \
             --project "ios/App/App.xcodeproj" \
             --scheme "App" \
-            --configuration Release \
             --export-options-plist export_options.plist \
             --archive-flags "PROVISIONING_PROFILE_SPECIFIER=$PROFILE_UUID"
 
