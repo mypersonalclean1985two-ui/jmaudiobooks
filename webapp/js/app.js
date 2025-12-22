@@ -524,6 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     console.log("Starting book fetch...");
+    if (window.Capacitor) alert("Diagnostic: Starting book fetch inside App...");
     window.firebaseHelpers.getBooks()
         .then(data => {
             console.log(`[DEBUG] Fetched ${data.length} books from Firestore.`);

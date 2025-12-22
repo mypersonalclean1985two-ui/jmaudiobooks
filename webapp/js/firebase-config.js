@@ -176,10 +176,14 @@ window.firebaseHelpers = {
     },
     getBooks: async () => {
         try {
-            const snapshot = await db.collection('books').get({ source: 'server' });
+            console.log("getBooks: Fetching from Firestore...");
+            // Use default source (cache then server) for better mobile reliability
+            const snapshot = await db.collection('books').get();
+            console.log(`getBooks: Successfully fetched ${snapshot.docs.length} books.`);
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error('Error getting books:', error);
+            alert("Diagnostic: Error fetching books: " + error.message);
             return [];
         }
     },
