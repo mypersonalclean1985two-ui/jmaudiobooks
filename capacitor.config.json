@@ -9,6 +9,8 @@
       "book-258ee.web.app",
       "*.firebaseapp.com",
       "*.google.com",
+      "*.googleapis.com",
+      "*.gstatic.com",
       "*.apple.com",
       "appleid.apple.com"
     ]
