@@ -39,6 +39,9 @@ workflows:
 
       - name: Build and Archive
         script: |
+          set -e
+          set -o pipefail
+
           # Create ExportOptions.plist
           cat > export_options.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -70,8 +73,7 @@ workflows:
             -configuration Release \
             -archivePath build/ios/xcarchive/App.xcarchive \
             -xcconfig ios/App/signing.xcconfig \
-            archive \
-            | xcpretty
+            archive
 
           # EXPORT THE IPA
           mkdir -p build/ios/ipa
@@ -79,8 +81,10 @@ workflows:
             -exportArchive \
             -archivePath build/ios/xcarchive/App.xcarchive \
             -exportOptionsPlist export_options.plist \
-            -exportPath build/ios/ipa \
-            | xcpretty
+            -exportPath build/ios/ipa
+
+          # Verify artifact exists
+          ls -R build/ios/ipa
 
     artifacts:
       - "build/ios/ipa/*.ipa"
