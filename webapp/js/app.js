@@ -96,7 +96,7 @@ function initApp() {
     let books = [];
     let currentlyReading = null;
     let readingProgress = {};
-    let stats = { streak: 7, weekMinutes: 214, completedBooks: 32 };
+    let stats = { streak: 0, weekMinutes: 0, completedBooks: 0 };
 
     // Auth State Listener
     console.log("App: Registering onAuthStateChanged...");
@@ -104,23 +104,36 @@ function initApp() {
     console.log("App: Registering onAuthStateChanged...");
     window.onAuthStateChanged = async (user) => {
         console.log("App: onAuthStateChanged fired. User:", user ? user.email : 'None');
+
+        // Close Login Modal if open (failsafe)
+        if (window.loginModal) window.loginModal.style.display = 'none';
+
         if (user) {
             window.currentUser = user;
             console.log('Auth state changed: Logged in as', user.email);
 
-            // Set initial values from Auth
-            userProfile.name = user.displayName || 'User';
+            // Capture Guest Data before overwriting
+            const previousGuestName = userProfile.isGuest && userProfile.name !== 'Guest User' ? userProfile.name : null;
+            const previousGuestBio = userProfile.isGuest && userProfile.bio !== 'Avid reader and book collector.' ? userProfile.bio : null;
+
+            // Set initial values from Auth (Source of Truth for new logins)
+            // Default to 'Guest' only if absolutely no name is found
+            userProfile.name = user.displayName;
             userProfile.email = user.email;
             userProfile.image = user.photoURL;
             userProfile.isGuest = false;
 
+            console.log("App: Auth Initialized. Name:", userProfile.name, "Email:", userProfile.email);
+
             // Fetch and prioritize Firestore data
             try {
-                // Fetch the actual profile from Firestore (source of truth for name)
+                // Fetch the actual profile from Firestore
                 const firestoreProfile = await window.firebaseHelpers.getUserProfile(user.uid);
+
                 if (firestoreProfile) {
-                    console.log("App: Found Firestore profile, updating name to:", firestoreProfile.displayName);
-                    if (firestoreProfile.displayName) {
+                    console.log("App: Found Firestore profile:", firestoreProfile);
+                    // Only overwrite if Firestore has valid data (not empty strings)
+                    if (firestoreProfile.displayName && firestoreProfile.displayName.trim() !== '') {
                         userProfile.name = firestoreProfile.displayName;
                     }
                     if (firestoreProfile.photoURL) {
@@ -129,6 +142,38 @@ function initApp() {
                     if (firestoreProfile.bio) {
                         userProfile.bio = firestoreProfile.bio;
                     }
+                } else {
+                    // No Firestore profile? Check if we should migrate Guest Data
+                    console.log("App: No Firestore profile found. Checking for guest migration...");
+                    let updates = {};
+
+                    // If we migrated from Guest with a custom name, use that. 
+                    // OTHERWISE, keep the Google Name (don't overwrite with 'User')
+                    if (previousGuestName) {
+                        userProfile.name = previousGuestName;
+                        updates.displayName = previousGuestName;
+                    } else if (!userProfile.name) {
+                        // If Auth didn't have a name either, fallback
+                        userProfile.name = 'Book Lover';
+                        updates.displayName = 'Book Lover';
+                    } else {
+                        // Use the Auth name (Google Name) for the initial Firestore save
+                        updates.displayName = userProfile.name;
+                    }
+
+                    if (previousGuestBio) {
+                        userProfile.bio = previousGuestBio;
+                        updates.bio = previousGuestBio;
+                    }
+                    if (userProfile.image) {
+                        updates.photoURL = userProfile.image;
+                    }
+
+                    // Save this initial state to Firestore so it persists
+                    await window.firebaseHelpers.updateUserProfile(user.uid, {
+                        ...updates,
+                        email: userProfile.email
+                    });
                 }
 
                 const remoteStats = await window.firebaseHelpers.getStats(user.uid);
@@ -155,8 +200,12 @@ function initApp() {
                 localStorage.setItem('stats', JSON.stringify(stats));
                 localStorage.setItem('userProfile', JSON.stringify(userProfile));
 
+                // Alert Success (Optional, but helps debug)
+                // alert("Logged in as: " + userProfile.name);
+
             } catch (e) {
                 console.error("Error syncing data on login:", e);
+                alert("Login Sync Error: " + e.message); // Help user report issues
             }
         } else {
             // Ensure guest mode if not logged in
@@ -174,9 +223,12 @@ function initApp() {
             setTheme(true);
             if (notificationsToggle) notificationsToggle.checked = true;
         }
+
+        // Force UI Refresh
         renderProfile();
         setGreeting();
-        // Re-render home to update stats display
+
+        // Update header if on Home
         if (document.querySelector('.nav-btn.active')?.getAttribute('data-target') === 'home') {
             renderHome();
         }
@@ -692,7 +744,7 @@ function initApp() {
             window.CategoryEnhance.initHorizontalScroll('.books-grid');
         }
 
-        
+
     }
 
     function renderLibrary() {
@@ -711,9 +763,9 @@ function initApp() {
             ? `<button class="btn-primary" style="width:100%;margin-bottom:12px;" id="login-btn">Log In</button>`
             : `<button class="btn-secondary" style="width:100%;color:#ef4444;" id="logout-btn"><span>🚪</span> Log Out</button>`;
 
-        const editBtnHtml = !userProfile.isGuest
-            ? `<button class="btn-primary" style="width:100%;" id="edit-profile-btn">Edit Profile</button>`
-            : '';
+        const editBtnHtml = `<button class="btn-primary" style="width:100%;" id="edit-profile-btn">Edit Profile</button>`;
+        const settingsBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="settings-btn">⚙️ Settings</button>`;
+        const supportBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="contact-support-btn">💬 Contact Support</button>`;
 
         mainContent.innerHTML = `
                 <div class="profile-header">
@@ -742,7 +794,8 @@ function initApp() {
                 <div style="display:flex;flex-direction:column;gap:12px;max-width:300px;margin:0 auto;">
                     ${loginBtnHtml}
                     ${editBtnHtml}
-                    <button class="btn-secondary" style="width:100%;" id="settings-btn"><span>⚙️</span> Settings</button>
+                    ${settingsBtnHtml}
+                    ${supportBtnHtml}
                 </div>
             </div>
                 `;
@@ -753,9 +806,14 @@ function initApp() {
         const logoutBtn = document.getElementById('logout-btn');
         const loginBtn = document.getElementById('login-btn');
 
-        if (editBtn) editBtn.addEventListener('click', openProfileModal);
-        if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
-        if (logoutBtn) logoutBtn.addEventListener('click', openLogoutModal);
+        if (editBtn) editBtn.addEventListener('click', () => window.openProfileModal());
+        if (settingsBtn) settingsBtn.addEventListener('click', () => window.openSettingsModal());
+        if (logoutBtn) logoutBtn.addEventListener('click', () => window.openLogoutModal());
+
+        // Listener for Support Button
+        const supportBtn = document.getElementById('contact-support-btn');
+        if (supportBtn) supportBtn.addEventListener('click', () => window.openSupportModal());
+
         if (loginBtn) loginBtn.addEventListener('click', () => window.showModal('login-modal'));
     }
 
@@ -763,6 +821,11 @@ function initApp() {
 
     // Profile Functions
     window.openProfileModal = function () {
+        if (userProfile.isGuest) {
+            alert("Please Log In to customize your profile and save your progress permanently.");
+            window.showModal('login-modal');
+            return;
+        }
         profileNameInput.value = userProfile.name;
         profileEmailInput.value = userProfile.email;
         profileBioInput.value = userProfile.bio || '';
@@ -777,16 +840,126 @@ function initApp() {
             profilePlaceholder.textContent = userProfile.name.charAt(0).toUpperCase();
         }
 
-        profileModal.style.display = 'flex';
+        window.showModal('profile-modal');
     };
 
     window.openSettingsModal = function () {
-        settingsModal.style.display = 'flex';
+        window.showModal('settings-modal');
     };
 
     window.openLogoutModal = function () {
-        logoutModal.style.display = 'flex';
+        window.showModal('logout-modal');
     };
+
+    // Support System Logic
+    window.openSupportModal = function () {
+        window.showModal('support-modal');
+        // Reset to New Ticket tab
+        window.switchSupportTab('new');
+    };
+
+    window.switchSupportTab = function (tabName) {
+        // Toggle Tabs
+        document.querySelectorAll('.support-tab').forEach(t => t.classList.remove('active'));
+        if (tabName === 'new') document.getElementById('tab-new-ticket').classList.add('active');
+        if (tabName === 'history') document.getElementById('tab-history').classList.add('active');
+
+        // Toggle Views
+        const newView = document.getElementById('view-new-ticket');
+        const historyView = document.getElementById('view-ticket-history');
+
+        if (tabName === 'new') {
+            newView.style.display = 'block';
+            historyView.style.display = 'none';
+        } else {
+            newView.style.display = 'none';
+            historyView.style.display = 'block';
+            window.renderTicketHistory();
+        }
+    };
+
+    window.submitTicket = async function () {
+        const category = document.getElementById('ticket-category').value;
+        const subject = document.getElementById('ticket-subject').value.trim();
+        const message = document.getElementById('ticket-message').value.trim();
+        const btn = document.getElementById('submit-ticket-btn');
+
+        if (!subject || !message) {
+            alert("Please fill in both subject and message.");
+            return;
+        }
+
+        try {
+            btn.disabled = true;
+            btn.textContent = "Submitting...";
+
+            await window.firebaseHelpers.createSupportTicket(window.currentUser.uid, {
+                email: userProfile.email,
+                category,
+                subject,
+                message
+            });
+
+            alert("Ticket Submitted Successfully! We will get back to you shortly.");
+
+            // Clear Form
+            document.getElementById('ticket-subject').value = '';
+            document.getElementById('ticket-message').value = '';
+
+            // Switch to History
+            window.switchSupportTab('history');
+
+        } catch (error) {
+            alert("Error submitting ticket: " + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Submit Ticket";
+        }
+    };
+
+    window.renderTicketHistory = async function () {
+        const container = document.getElementById('ticket-list-container');
+        container.innerHTML = '<div style="text-align: center; color: var(--text-secondary); margin-top: 40px;">Loading tickets...</div>';
+
+        const tickets = await window.firebaseHelpers.getUserSupportTickets(window.currentUser.uid);
+
+        if (tickets.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; color: var(--text-secondary); margin-top: 40px;">
+                    <div style="font-size: 2rem; margin-bottom: 12px;">🎫</div>
+                    <p>No tickets found.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = tickets.map(ticket => `
+            <div class="ticket-card" style="background: var(--card-bg); padding: 16px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                    <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary);">${ticket.subject}</div>
+                    <div class="ticket-status ${ticket.status.toLowerCase()}" 
+                         style="font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; background: ${getStatusColor(ticket.status)}; color: white;">
+                        ${ticket.status}
+                    </div>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">
+                    ${ticket.category} • ${new Date(ticket.createdAt.seconds * 1000).toLocaleDateString()}
+                </div>
+                <div style="font-size: 0.9rem; color: var(--text-primary); line-height: 1.4;">
+                    ${ticket.message.substring(0, 100)}${ticket.message.length > 100 ? '...' : ''}
+                </div>
+            </div>
+        `).join('');
+    };
+
+    function getStatusColor(status) {
+        switch (status.toLowerCase()) {
+            case 'open': return '#3b82f6'; // Blue
+            case 'pending': return '#f59e0b'; // Amber
+            case 'closed': return '#10b981'; // Green
+            default: return '#6b7280'; // Gray
+        }
+    }
 
     // Logout Logic with State Clearing
     window.logout = function () {
@@ -889,26 +1062,45 @@ function initApp() {
 
 
     if (saveProfileBtn) {
-        saveProfileBtn.addEventListener('click', () => {
+        saveProfileBtn.addEventListener('click', async () => {
             const newName = profileNameInput.value.trim();
             const newEmail = profileEmailInput.value.trim();
             const newBio = profileBioInput.value.trim();
 
             if (newName && newEmail) {
+                const originalText = saveProfileBtn.textContent;
+                saveProfileBtn.textContent = "Saving...";
+                saveProfileBtn.disabled = true;
+
                 userProfile.name = newName;
                 userProfile.email = newEmail;
                 userProfile.bio = newBio;
-                // userProfile.isGuest = false; // Don't auto-set to false on edit, only on login
 
                 // Save image if uploaded
                 if (profilePreview.style.display === 'block') {
                     userProfile.image = profilePreview.src;
                 }
 
-                saveProfile();
-                profileModal.style.display = 'none';
+                try {
+                    await saveProfile();
+                    saveProfileBtn.textContent = "Saved! ✓";
+                    saveProfileBtn.style.backgroundColor = "#10b981"; // Success green
+
+                    setTimeout(() => {
+                        saveProfileBtn.textContent = originalText;
+                        saveProfileBtn.style.backgroundColor = ""; // Reset
+                        saveProfileBtn.disabled = false;
+                        profileModal.style.display = 'none';
+                    }, 1000);
+                } catch (err) {
+                    console.error("Save Profile Error:", err);
+                    alert("Failed to save profile. Please try again.");
+                    saveProfileBtn.textContent = originalText;
+                    saveProfileBtn.style.backgroundColor = "";
+                    saveProfileBtn.disabled = false;
+                }
             } else {
-                alert('Please enter both name and email.');
+                alert("Name and Email are required.");
             }
         });
     }
@@ -1022,6 +1214,18 @@ window.showModal = function (modalId) {
     if (modal) {
         modal.style.display = 'flex';
         modal.style.alignItems = 'flex-end'; // Match CSS modal class
+    }
+};
+
+window.showModal = function (modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+        // Ensure child elements like close buttons work
+        const closeBtn = modal.querySelector('.close-btn');
+        if (closeBtn && !closeBtn.onclick) {
+            closeBtn.onclick = () => window.closeModal(modalId);
+        }
     }
 };
 

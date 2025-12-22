@@ -298,11 +298,41 @@ window.firebaseHelpers = {
             await db.collection('users').doc(userId)
                 .collection('settings').doc('current').set({
                     ...settingsData,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
         } catch (error) {
             console.error('Error updating settings:', error);
+        }
+    },
+    // Support System
+    createSupportTicket: async (userId, ticketData) => {
+        try {
+            await db.collection('support_tickets').add({
+                userId: userId,
+                userEmail: ticketData.email || 'unknown',
+                subject: ticketData.subject,
+                category: ticketData.category,
+                message: ticketData.message,
+                status: 'Open',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return true;
+        } catch (error) {
+            console.error('Error creating ticket:', error);
             throw error;
+        }
+    },
+    getUserSupportTickets: async (userId) => {
+        try {
+            const snapshot = await db.collection('support_tickets')
+                .where('userId', '==', userId)
+                .orderBy('createdAt', 'desc')
+                .get();
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error('Error getting tickets:', error);
+            return [];
         }
     },
     deleteUserData: async (userId) => {

@@ -47,8 +47,8 @@ body {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 16px;
-    padding-top: 24px;
-    /* Lowered down */
+    padding-top: calc(24px + env(safe-area-inset-top));
+    /* Lowered down and respects notch */
 }
 
 .back-btn {
