@@ -106,6 +106,7 @@ workflows:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $APP_STORE_CONNECT_KEY_ID
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        apple_id: 6756834122 # Numeric ID from your App Store Connect screenshot
         submit_to_testflight: true
         beta_groups:
-          - "External Testers" # Optional: Change to your group name if you have one
+          - "External Testers"
