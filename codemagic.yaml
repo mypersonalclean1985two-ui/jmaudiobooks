@@ -1,0 +1,50 @@
+workflows:
+  ios-release:
+    name: iOS Release
+    environment:
+      xcode: latest # Uses the latest stable Xcode version
+      node: latest  # Uses the latest stable Node.js version
+      groups:
+        - app_store_credentials # You need to create this group in CodeMagic UI variables
+    scripts:
+      - name: Install npm dependencies
+        script: npm install
+
+      - name: Sync Capacitor
+        script: npx cap sync ios
+
+      - name: Initialize Keychain
+        script: keychain initialize
+
+      - name: Fetch Signing Files
+        script: |
+          # Automatically fetch or create signing certificates and profiles
+          # Requires APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID
+          app-store-connect fetch-signing-files "com.jmaudiobooks.jmaudiobooks" \
+            --type IOS_APP_STORE \
+            --create
+          
+          keychain add-certificates
+
+      - name: Set up code signing settings
+        script: xcode-project use-profiles
+
+      - name: Build IPA
+        script: |
+          # Build the iOS app
+          # Note: Using .xcodeproj because no Podfile/Workspace was found
+          xcode-project build-ipa \
+            --project "ios/App/App.xcodeproj" \
+            --scheme "App"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - *.dSYM.zip
+
+    publishing:
+      app_store_connect:
+        # Use the API Key variables for publishing
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
