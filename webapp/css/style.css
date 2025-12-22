@@ -340,8 +340,8 @@ body {
 .book-card {
     cursor: pointer;
     transition: transform .2s;
-    min-width: 110px;
-    width: 110px;
+    min-width: 140px;
+    width: 140px;
     flex-shrink: 0;
     scroll-snap-align: start
 }
@@ -351,8 +351,8 @@ body {
 }
 
 .book-cover {
-    width: 110px;
-    height: 165px;
+    width: 140px;
+    height: 210px;
     border-radius: 12px;
     object-fit: cover;
     box-shadow: var(--shadow-lg);
@@ -1066,4 +1066,16 @@ input:checked+.slider:before {
 
 .tabs-container::-webkit-scrollbar {
     display: none;
+}
+.discovery-container {
+    padding-bottom: 40px;
+}
+
+.books-grid {
+    padding-top: 5px;
+}
+
+.section-header {
+    margin-top: 15px;
+    margin-bottom: 10px;
 }

@@ -653,16 +653,67 @@ function initApp() {
             window.CategoryEnhance.renderBackButton('Discover Books', () => renderHome());
         }
 
-        mainContent.innerHTML = `
-            <div class="section-header">
-                <div class="section-header-title">All Categories</div>
+        // Get all unique categories
+        const categories = window.CategoryUtils ? window.CategoryUtils.getAllCategories(books) : [...new Set(books.map(b => b.category))].sort();
+
+        let discoveryHtml = `
+            <div class="search-section" style="margin-top: 0; padding-top: 10px;">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="discover-search-input"
+                        placeholder="Search by title, author, or genre">
+                </div>
             </div>
-            <div class="books-grid grid-layout" id="discover-grid"></div>
         `;
-        renderBooksGrid(books, document.getElementById('discover-grid'));
+
+        // Add a "Trending" row
+        discoveryHtml += `
+            <div class="section-header"><div class="section-header-title">Trending Now</div></div>
+            <div class="books-grid" id="trending-grid"></div>
+        `;
+
+        // Add a row for each category
+        categories.forEach(cat => {
+            if (!cat) return;
+            const safeId = cat.replace(/\s+/g, '-').toLowerCase();
+            discoveryHtml += `
+                <div class="section-header"><div class="section-header-title">${cat}</div></div>
+                <div class="books-grid" id="grid-${safeId}"></div>
+            `;
+        });
+
+        mainContent.innerHTML = discoveryHtml;
+
+        // Render data
+        renderBooksGrid(books.slice(0, 10), document.getElementById('trending-grid'));
+        categories.forEach(cat => {
+            if (!cat) return;
+            const safeId = cat.replace(/\s+/g, '-').toLowerCase();
+            const filtered = books.filter(b => b.category === cat);
+            const grid = document.getElementById(`grid-${safeId}`);
+            if (grid) renderBooksGrid(filtered, grid);
+        });
 
         if (window.CategoryEnhance) {
             window.CategoryEnhance.initHorizontalScroll('.books-grid');
+        }
+
+        const discSearch = document.getElementById('discover-search-input');
+        if (discSearch) {
+            discSearch.addEventListener('input', () => {
+                const term = discSearch.value.toLowerCase();
+                const grids = document.querySelectorAll('.books-grid');
+                if (term.length > 0) {
+                    const filtered = books.filter(book =>
+                        book.title.toLowerCase().includes(term) ||
+                        book.author.toLowerCase().includes(term) ||
+                        book.category.toLowerCase().includes(term)
+                    );
+                    grids.forEach(grid => renderBooksGrid(filtered, grid));
+                } else {
+                    renderDiscover();
+                }
+            });
         }
     }
 
