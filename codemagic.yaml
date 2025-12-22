@@ -43,7 +43,17 @@ workflows:
               os.makedirs(profile_dir)
               
           decode_env('CM_CERTIFICATE', '/tmp/certificate.p12')
-          decode_env('CM_PROVISIONING_PROFILE', os.path.join(profile_dir, 'profile.mobileprovision'))
+          
+          # Copy provisioning profile from repo source
+          import shutil
+          repo_profile = 'ios/JM_Audiobooks_App_Store.mobileprovision'
+          dest_profile = os.path.join(profile_dir, 'profile.mobileprovision')
+          try:
+              shutil.copy(repo_profile, dest_profile)
+              print(f'Successfully copied {repo_profile} to {dest_profile}')
+          except Exception as e:
+              print(f'Error copying profile: {e}')
+              exit(1)
           "
           
           keychain add-certificates \
