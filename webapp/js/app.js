@@ -542,6 +542,8 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(error => {
             console.error('Error loading books:', error);
+            // Show alert on mobile for debugging
+            alert(`Mobile Debug - Book Load Failed: ${error.message}\nCode: ${error.code}`);
             alert(`Error loading books: ${error.message}`);
             mainContent.innerHTML = `<div style="text-align:center;padding:50px;">
                 <h3>Error loading books</h3>

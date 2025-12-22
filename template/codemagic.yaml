@@ -1,0 +1,92 @@
+workflows:
+  ios-release:
+    name: iOS Release
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - app_store_credentials
+      vars:
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
+        BUNDLE_ID: "REPLACE_WITH_YOUR_NEW_BUNDLE_ID"
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm install
+          
+      - name: Sync Capacitor
+        script: |
+          npx cap sync ios
+
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          keychain add-certificates \
+            --certificate signing/*.p12 \
+            --certificate-password "$CM_CERTIFICATE_PASSWORD"
+            
+          # Auto-detect profile UUID and install correctly
+          PROFILE_SRC=$(find signing -name "*.mobileprovision" | head -n 1)
+          PROFILE_UUID=$(grep -aA1 "UUID" "$PROFILE_SRC" | grep -o "[-A-Z0-9]\{36\}")
+          PROFILE_FOLDER="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_FOLDER"
+          cp "$PROFILE_SRC" "$PROFILE_FOLDER/$PROFILE_UUID.mobileprovision"
+
+      - name: Set build number
+        script: |
+          cd ios/App
+          agvtool new-version -all $(($BUILD_NUMBER))
+
+      - name: Build and Archive
+        script: |
+          set -e
+          set -o pipefail
+
+          # Create ExportOptions.plist
+          cat > export_options.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>QY25P2CW87</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>$BUNDLE_ID</key>
+              <string>$(security cms -D -i $(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name "*.mobileprovision" | head -n 1) | grep -A 1 "Name" | tail -n 1 | sed 's/.*<string>\(.*\)<\/string>.*/\1/')</string>
+            </dict>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+          </dict>
+          </plist>
+          EOF
+
+          mkdir -p build/ios/xcarchive
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath build/ios/xcarchive/App.xcarchive \
+            archive
+
+          mkdir -p build/ios/ipa
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/ios/xcarchive/App.xcarchive \
+            -exportOptionsPlist export_options.plist \
+            -exportPath build/ios/ipa
+
+    artifacts:
+      - "build/ios/ipa/*.ipa"
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true

@@ -17,6 +17,11 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
+// FIX: Force Long Polling for Capacitor/iOS connection issues
+db.settings({
+    experimentalForceLongPolling: true
+});
+
 // Set session persistence to LOCAL (default, but explicit)
 // In incognito/private mode, this will use sessionStorage instead
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)

@@ -24,8 +24,9 @@ try:
     
     for doc in docs:
         book = doc.to_dict()
-        print(f"ID:{doc.id}")
-        print(f"TITLE:{book.get('title', 'Unknown')}")
+        print(f"ID: {doc.id}")
+        for k, v in book.items():
+            print(f"{k}: {v}")
         break
 
 except Exception as e:

@@ -1,0 +1,2 @@
+CERT_CN=Apple Distribution: Saba Rehmat (QY25P2CW87)
+PROFILE_UUID=bc145a22-aaba-4800-9608-e8fd063229c9

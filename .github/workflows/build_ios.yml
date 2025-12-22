@@ -146,25 +146,16 @@ jobs:
           echo "--- Export Log ---"
           cat ios/App/xcodebuild_export.log || true
 
-      - name: Upload to TestFlight
-        if: success()
+      - name: Upload to TestFlight (App Specific Password)
         env:
-          APP_STORE_KEY_ID: ${{ secrets.APP_STORE_KEY_ID }}
-          APP_STORE_ISSUER_ID: ${{ secrets.APP_STORE_ISSUER_ID }}
-          APP_STORE_PRIVATE_KEY: ${{ secrets.APP_STORE_PRIVATE_KEY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
         run: |
-          echo "Creating Private Key File..."
-          mkdir -p ~/.private_keys
-          echo "$APP_STORE_PRIVATE_KEY" | base64 --decode > ~/.private_keys/AuthKey_$APP_STORE_KEY_ID.p8
-          
-          echo "Checking Key File Size:"
-          ls -l ~/.private_keys/AuthKey_$APP_STORE_KEY_ID.p8
-          
-          echo "Uploading IPA to App Store Connect..."
+          echo "Uploading IPA using App-Specific Password..."
           xcrun altool --upload-package ios/App/output/App.ipa \
             --type ios \
-            --apiKey "$APP_STORE_KEY_ID" \
-            --apiIssuer "$APP_STORE_ISSUER_ID" \
+            --username "$APPLE_ID" \
+            --password "$APP_SPECIFIC_PASSWORD" \
             --verbose
 
       - name: Upload Artifact
