@@ -657,13 +657,7 @@ function initApp() {
         const categories = window.CategoryUtils ? window.CategoryUtils.getAllCategories(books) : [...new Set(books.map(b => b.category))].sort();
 
         let discoveryHtml = `
-            <div class="search-section" style="margin-top: 0; padding-top: 10px;">
-                <div class="search-wrapper">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" class="search-input" id="discover-search-input"
-                        placeholder="Search by title, author, or genre">
-                </div>
-            </div>
+            <div class="discovery-container">
         `;
 
         // Add a "Trending" row
@@ -698,23 +692,7 @@ function initApp() {
             window.CategoryEnhance.initHorizontalScroll('.books-grid');
         }
 
-        const discSearch = document.getElementById('discover-search-input');
-        if (discSearch) {
-            discSearch.addEventListener('input', () => {
-                const term = discSearch.value.toLowerCase();
-                const grids = document.querySelectorAll('.books-grid');
-                if (term.length > 0) {
-                    const filtered = books.filter(book =>
-                        book.title.toLowerCase().includes(term) ||
-                        book.author.toLowerCase().includes(term) ||
-                        book.category.toLowerCase().includes(term)
-                    );
-                    grids.forEach(grid => renderBooksGrid(filtered, grid));
-                } else {
-                    renderDiscover();
-                }
-            });
-        }
+        
     }
 
     function renderLibrary() {
