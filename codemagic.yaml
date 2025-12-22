@@ -51,6 +51,8 @@ workflows:
       - name: Set build number
         script: |
           # Use CodeMagic build number for the archive (must be unique for Apple)
+          # agvtool must be run in the directory containing the project file
+          cd ios/App
           agvtool new-version -all $(($BUILD_NUMBER))
 
       - name: Build and Archive
