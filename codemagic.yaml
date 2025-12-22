@@ -85,3 +85,13 @@ workflows:
     artifacts:
       - "build/ios/ipa/*.ipa"
       - "build/ios/xcarchive/*.xcarchive"
+
+    publishing:
+      app_store_connect:
+        # Manual authentication using environment variables
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        beta_groups:
+          - "External Testers" # Optional: Change to your group name if you have one
