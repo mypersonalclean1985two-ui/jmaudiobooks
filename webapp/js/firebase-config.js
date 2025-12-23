@@ -118,83 +118,81 @@ auth.onAuthStateChanged((user) => {
 // Helper functions
 window.firebaseHelpers = {
     signInWithGoogle: async () => {
-        // DEBUG: Check environment
-        const isCapacitor = !!window.Capacitor;
-        const PluginAvailable = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth;
-
-        // alert(`Debug: Platform=${isCapacitor ? 'Native' : 'Web'}, Plugin=${PluginAvailable ? 'Yes' : 'No'}`);
-
-        if (PluginAvailable) {
-            try {
-                const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
-                // alert("Native Success"); // Uncomment if needed
-                const credential = firebase.auth.GoogleAuthProvider.credential(googleUser.authentication.idToken);
-                return await auth.signInWithCredential(credential);
-            } catch (error) {
-                alert("Native Google Error: " + JSON.stringify(error));
-                console.error("Native Google Sign-In Failed:", error);
-                throw error;
-            }
-        } else {
-            // alert("Using Web Fallback (Should not happen on App)");
-            const provider = new firebase.auth.GoogleAuthProvider();
-            try {
-                await auth.signInWithRedirect(provider);
-            } catch (error) {
-                alert("Web Google Error: " + error.message);
-                throw error;
-            }
+        const provider = new firebase.auth.GoogleAuthProvider();
+        try {
+            await auth.signInWithRedirect(provider);
+        } catch (error) {
+            console.error('Error signing in with Google:', error);
+            throw error;
         }
     },
     signInWithApple: async () => {
+        // Native iOS Flow using @capacitor-community/apple-sign-in
         const SignInWithApple = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SignInWithApple;
 
-        // alert(`Debug Apple: Plugin=${SignInWithApple ? 'Yes' : 'No'}`);
-
         if (SignInWithApple) {
+            console.log("Apple Sign-In: detected Native Plugin (@capacitor-community).");
             try {
+                // 1. Request from Apple
+                // 'clientId' and 'redirectURI' are optional/ignored for native, but good for completeness if config demands
                 const response = await SignInWithApple.authorize({
-                    clientId: 'com.jmaudiobooks.jmaudiobooks',
+                    clientId: 'com.jmaudiobooks.jmaudiobooks', // Match Bundle ID
                     redirectURI: 'https://book-258ee.firebaseapp.com/__/auth/handler',
                     scopes: 'name email',
                     state: 'INIT_SIGNIN'
                 });
 
+                console.log("Apple Native Response:", response);
+
                 if (!response.response || !response.response.identityToken) {
                     throw new Error("No identity token returned from Apple.");
                 }
 
+                // 2. Create Credential
                 const provider = new firebase.auth.OAuthProvider('apple.com');
                 const credential = provider.credential({
                     idToken: response.response.identityToken,
                     rawNonce: response.response.nonce || null
                 });
 
+                // 3. Sign in
                 const result = await auth.signInWithCredential(credential);
 
-                // Update Profile
+                // 4. Update Profile (Apple only sends name ONCE, on first login)
+                // The plugin structure puts name in `response.response.givenName` or `response.response.fullName`
+                // We check different fields depending on plugin version variations
                 const givenName = response.response.givenName;
                 const familyName = response.response.familyName;
+
                 if (givenName) {
                     const name = `${givenName} ${familyName || ''}`.trim();
+                    console.log("Got Apple Name:", name);
                     if (result.user) {
-                        result.user.updateProfile({ displayName: name }).catch(e => console.warn(e));
-                        db.collection('users').doc(result.user.uid).set({ displayName: name }, { merge: true });
+                        try {
+                            await result.user.updateProfile({ displayName: name });
+                            await db.collection('users').doc(result.user.uid).set({
+                                displayName: name,
+                                email: result.user.email
+                            }, { merge: true });
+                        } catch (e) { console.error("Name update warn:", e); }
                     }
                 }
                 return;
 
             } catch (error) {
-                alert("Native Apple Error: " + JSON.stringify(error));
+                console.error("Native Apple Sign-In Failed:", error);
                 throw error;
             }
         }
 
+        // Web Fallback
         const provider = new firebase.auth.OAuthProvider('apple.com');
+        provider.addScope('email');
+        provider.addScope('name');
         try {
             await auth.signInWithRedirect(provider);
         } catch (error) {
-            alert("Web Apple Error: " + error.message);
+            console.error('Error signing in with Apple:', error);
             throw error;
         }
     },

@@ -53,16 +53,5 @@
 	<string>JM Audiobooks needs access to your camera to allow you to upload a profile picture.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>JM Audiobooks needs access to your photo library to allow you to upload a profile picture.</string>
-    <key>CFBundleURLTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleTypeRole</key>
-            <string>Editor</string>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>com.googleusercontent.apps.429711777820-bd940d990494</string>
-            </array>
-        </dict>
-    </array>
 </dict>
 </plist>

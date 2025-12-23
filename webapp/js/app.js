@@ -102,32 +102,16 @@ function initApp() {
 
     // Trial & Subscription Helper
     window.isTrialActive = () => {
-        // 1. If Subscribed, Trial logic is irrelevant (Always Access)
-        if (userProfile.subscriptionStatus === 'active') return true;
-
-        // 2. Permissive Defaults
+        // PERMISSIVE DEFAULTS: Don't block during sync or for guests who see "locked" content separately
         if (!window.authInitialized) return true;
         if (!window.currentUser || userProfile.isGuest) return true;
-
-        // 3. Check Date
         if (!userProfile.trialStartDate) return true;
 
         const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
         const now = new Date();
         const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
 
-        return diffDays <= 14;
-    };
-
-    window.getTrialDaysLeft = () => {
-        if (userProfile.subscriptionStatus === 'active') return '∞';
-        if (!userProfile.trialStartDate) return 14;
-
-        const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
-        const now = new Date();
-        const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
-        const left = 14 - diffDays;
-        return left > 0 ? left : 0;
+        return diffDays <= 14; // 14-day rule
     };
 
     // Auth State Listener
@@ -330,9 +314,26 @@ function initApp() {
                     <div id="auth-success" style="display:none;" class="auth-success-message"></div>
                     
                     <!-- Divider -->
-                    <div class="auth-divider" style="display:none">SECURE SOCIAL LOGIN</div>
+                    <div class="auth-divider">SECURE SOCIAL LOGIN</div>
                     
-                    <!-- Buttons Hidden for Simplification -->
+                    <!-- Google Sign-In Button -->
+                    <button id="google-signin-btn" class="google-signin-btn">
+                        <svg class="google-icon" viewBox="0 0 24 24" width="24" height="24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-. 34-1.43-. 34-2.25 0-.83.11-1.59.34-2.25V8.6H2.18C1.43 10.09 1 11.83 1 13.66s.43 3.57 1.18 5.09l2.85-2.22.81-.62z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                        <span>Continue with Google</span>
+                    </button>
+
+                    <!-- Apple Sign-In Button -->
+                    <button id="apple-signin-btn" class="apple-signin-btn">
+                        <svg class="apple-icon" viewBox="0 0 24 24" width="24" height="24">
+                            <path d="M15.073 13.25c.01 2.376 2.083 3.167 2.106 3.178-.018.06-0.327 1.12-1.077 2.217-.65 0.957-1.326 1.91-2.39 1.928-1.045.018-1.378-.62-2.576-.62-1.2 0-1.574.603-2.576.637-1.03.036-1.815-1.03-2.47-1.976-1.35-1.948-2.38-5.52-0.994-7.925 0.69-1.2 1.92-1.958 3.255-1.987 1.016-.024 1.975.684 2.597.684.62 0 1.782-.845 3.007-.72 0.513.02 1.954.21 2.878 1.56-.073.045-1.72 1.006-1.753 2.946M12.96 4.63c.55-.67 0.92-1.603 0.82-2.53-.79.032-1.75.526-2.316 1.185-.506.58-.948 1.516-.83 2.41 0.885.068 1.78-.396 2.326-1.065"/>
+                        </svg>
+                        <span>Continue with Apple</span>
+                    </button>
                     
                     <!-- Toggle between Login/Signup -->
                     <div style="text-align:center;margin-top:10px;">
@@ -946,30 +947,7 @@ function initApp() {
 
         const currentBook = books.find(b => b.id === currentlyReading?.bookId);
 
-        // TRIAL STATUS BANNER
-        let trialBanner = '';
-        if (window.authInitialized && !userProfile.isGuest && userProfile.subscriptionStatus !== 'active') {
-            const daysLeft = window.getTrialDaysLeft();
-            trialBanner = `
-                <div class="trial-banner" onclick="window.openSubscriptionModal()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); margin-bottom: 24px; border-radius: 16px; padding: 16px 20px; color: white; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); cursor: pointer;">
-                    <div>
-                        <div style="font-weight: 800; font-size: 1rem; margin-bottom: 2px;">⚡ Free Trial Active</div>
-                        <div style="font-size: 0.85rem; opacity: 0.9;">${daysLeft} days remaining</div>
-                    </div>
-                    <button style="background: white; color: #059669; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;">Upgrade</button>
-                </div>
-            `;
-        } else if (window.authInitialized && userProfile.subscriptionStatus === 'active') {
-            // Optional: Smaller Premium Badge
-            trialBanner = `
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px; opacity:0.7;">
-                    <span style="background:var(--accent-primary); color:white; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:700;">PREMIUM</span>
-                    <span style="font-size:0.8rem; color:var(--text-secondary);">Unlimited Access Unlocked</span>
-                </div>
-             `;
-        }
-
-        mainContent.innerHTML = trialBanner + `<div class="section-title">CONTINUE READING</div><div class="continue-reading-card" onclick="resumeReading()"><img src="${currentBook ? getCoverUrl(currentBook) : 'placeholder.svg'}" class="continue-reading-cover" alt="${currentBook?.title || 'Book'}" onerror="this.src='placeholder.svg'"><div class="continue-reading-info"><div><div class="continue-reading-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${currentBook?.title || 'No Book'}</div><div class="continue-reading-author">${currentBook?.author || ''}</div></div><div><div class="progress-bar"><div class="progress-fill" style="width:${currentlyReading?.progress || 0}%"></div></div><div class="progress-text">Chapter ${currentlyReading?.chapter || 0} of ${currentlyReading?.totalChapters || 0} - ${currentlyReading?.progress || 0}% completed</div><button class="resume-btn" onclick="event.stopPropagation();resumeReading();">Resume</button></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-label">Streak</div><div class="stat-value">${stats.streak} days</div></div><div class="stat-card"><div class="stat-icon">🕐</div><div class="stat-label">This week</div><div class="stat-value">${stats.weekMinutes} min</div></div><div class="stat-card"><div class="stat-icon">✓</div><div class="stat-label">Completed</div><div class="stat-value">${stats.completedBooks} books</div></div></div><div class="tabs-container">${tabsHtml}</div>`;
+        mainContent.innerHTML = `<div class="section-title">CONTINUE READING</div><div class="continue-reading-card" onclick="resumeReading()"><img src="${currentBook ? getCoverUrl(currentBook) : 'placeholder.svg'}" class="continue-reading-cover" alt="${currentBook?.title || 'Book'}" onerror="this.src='placeholder.svg'"><div class="continue-reading-info"><div><div class="continue-reading-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${currentBook?.title || 'No Book'}</div><div class="continue-reading-author">${currentBook?.author || ''}</div></div><div><div class="progress-bar"><div class="progress-fill" style="width:${currentlyReading?.progress || 0}%"></div></div><div class="progress-text">Chapter ${currentlyReading?.chapter || 0} of ${currentlyReading?.totalChapters || 0} - ${currentlyReading?.progress || 0}% completed</div><button class="resume-btn" onclick="event.stopPropagation();resumeReading();">Resume</button></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-label">Streak</div><div class="stat-value">${stats.streak} days</div></div><div class="stat-card"><div class="stat-icon">🕐</div><div class="stat-label">This week</div><div class="stat-value">${stats.weekMinutes} min</div></div><div class="stat-card"><div class="stat-icon">✓</div><div class="stat-label">Completed</div><div class="stat-value">${stats.completedBooks} books</div></div></div><div class="tabs-container">${tabsHtml}</div>`;
 
         // TRIAL WALL: If trial expired, show subscription overlay
         if (window.authInitialized && !window.isTrialActive()) {
@@ -1205,15 +1183,6 @@ function initApp() {
             ? `<button class="btn-primary" style="width:100%;margin-bottom:12px;" id="login-btn">Log In</button>`
             : `<button class="btn-secondary" style="width:100%;color:#ef4444;" id="logout-btn"><span>🚪</span> Log Out</button>`;
 
-        let subBtnHtml = '';
-        if (!userProfile.isGuest) {
-            if (userProfile.subscriptionStatus === 'active') {
-                subBtnHtml = `<div style="background:rgba(16, 185, 129, 0.1); border:1px solid #10b981; padding:12px; border-radius:12px; margin-bottom:12px; text-align:center; color:#10b981; font-weight:700;">✨ Premium Active</div>`;
-            } else {
-                subBtnHtml = `<button class="btn-primary" style="width:100%; margin-bottom:12px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);" id="upgrade-btn">💎 Get Premium</button>`;
-            }
-        }
-
         const editBtnHtml = `<button class="btn-primary" style="width:100%;" id="edit-profile-btn">Edit Profile</button>`;
         const settingsBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="settings-btn">⚙️ Settings</button>`;
         const supportBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="contact-support-btn">💬 Contact Support</button>`;
@@ -1245,7 +1214,6 @@ function initApp() {
 
         <div class="profile-menu">
             <div class="section-header"><div class="section-header-title">Account Settings</div></div>
-            ${subBtnHtml}
             ${userProfile.isGuest ? '' : editBtnHtml}
             ${loginBtnHtml}
             ${settingsBtnHtml}

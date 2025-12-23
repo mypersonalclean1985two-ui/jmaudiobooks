@@ -15,20 +15,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="JM Audiobooks">
 
-    <!-- CRITICAL DEBUGGING: Global Error Handler -->
-    <script>
-        window.onerror = function (msg, url, line, col, error) {
-            alert("Startup Error:\n" + msg + "\nLine: " + line);
-            // Attempt to force remove splash if error occurs
-            setTimeout(() => {
-                const s = document.getElementById('splash-screen');
-                if (s) s.style.display = 'none';
-            }, 2000);
-            return false;
-        };
-        console.log("Global Error Handler Installed");
-    </script>
-
     <!-- Firebase SDKs (Local Bundled Version for Reliability) -->
     <script src="lib/firebase-app-compat.js"></script>
     <script src="lib/firebase-auth-compat.js"></script>
@@ -36,9 +22,9 @@
     <script src="lib/firebase-storage-compat.js"></script>
 
     <!-- App Config & Initializers -->
-    <script src="js/firebase-config.js?v=12.0"></script>
-    <script src="js/category-utils.js?v=12.0"></script>
-    <script src="js/category-enhance.js?v=12.0"></script>
+    <script src="js/firebase-config.js?v=11.0"></script>
+    <script src="js/category-utils.js?v=11.0"></script>
+    <script src="js/category-enhance.js?v=11.0"></script>
 </head>
 
 <body>
@@ -410,7 +396,7 @@
     </div>
 
     <!-- Main Application Logic -->
-    <script src="js/app.js?v=12.0"></script>
+    <script src="js/app.js?v=11.0"></script>
 
     <script>
         if ('serviceWorker' in navigator) {
