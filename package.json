@@ -11,11 +11,11 @@
         "postinstall": "patch-package"
     },
     "dependencies": {
+        "@capacitor-community/apple-sign-in": "^7.1.0",
         "@capacitor/cli": "^8.0.0",
         "@capacitor/core": "^8.0.0",
         "@capacitor/ios": "^8.0.0",
         "cordova-plugin-purchase": "^13.12.1",
-        "cordova-plugin-sign-in-with-apple": "^0.1.2",
         "firebase-admin": "^12.7.0"
     },
     "devDependencies": {
