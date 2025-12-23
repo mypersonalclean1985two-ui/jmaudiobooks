@@ -118,6 +118,22 @@ auth.onAuthStateChanged((user) => {
 // Helper functions
 window.firebaseHelpers = {
     signInWithGoogle: async () => {
+        // Native Google Auth
+        const GoogleAuth = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth;
+        if (GoogleAuth) {
+            console.log("Google Sign-In: detected Native Plugin (@codetrix-studio/capacitor-google-auth).");
+            try {
+                const googleUser = await GoogleAuth.signIn();
+                console.log("Google Native Response:", googleUser);
+                const credential = firebase.auth.GoogleAuthProvider.credential(googleUser.authentication.idToken);
+                return await auth.signInWithCredential(credential);
+            } catch (error) {
+                console.error("Native Google Sign-In Failed:", error);
+                throw error;
+            }
+        }
+
+        // Web Fallback
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
             await auth.signInWithRedirect(provider);
@@ -134,9 +150,8 @@ window.firebaseHelpers = {
             console.log("Apple Sign-In: detected Native Plugin (@capacitor-community).");
             try {
                 // 1. Request from Apple
-                // 'clientId' and 'redirectURI' are optional/ignored for native, but good for completeness if config demands
                 const response = await SignInWithApple.authorize({
-                    clientId: 'com.jmaudiobooks.jmaudiobooks', // Match Bundle ID
+                    clientId: 'com.jmaudiobooks.jmaudiobooks',
                     redirectURI: 'https://book-258ee.firebaseapp.com/__/auth/handler',
                     scopes: 'name email',
                     state: 'INIT_SIGNIN'
@@ -158,9 +173,7 @@ window.firebaseHelpers = {
                 // 3. Sign in
                 const result = await auth.signInWithCredential(credential);
 
-                // 4. Update Profile (Apple only sends name ONCE, on first login)
-                // The plugin structure puts name in `response.response.givenName` or `response.response.fullName`
-                // We check different fields depending on plugin version variations
+                // 4. Update Profile (Apple only sends name ONCE)
                 const givenName = response.response.givenName;
                 const familyName = response.response.familyName;
 
@@ -168,19 +181,18 @@ window.firebaseHelpers = {
                     const name = `${givenName} ${familyName || ''}`.trim();
                     console.log("Got Apple Name:", name);
                     if (result.user) {
-                        try {
-                            await result.user.updateProfile({ displayName: name });
-                            await db.collection('users').doc(result.user.uid).set({
-                                displayName: name,
-                                email: result.user.email
-                            }, { merge: true });
-                        } catch (e) { console.error("Name update warn:", e); }
+                        await result.user.updateProfile({ displayName: name }).catch(e => console.warn(e));
+                        await db.collection('users').doc(result.user.uid).set({
+                            displayName: name,
+                            email: result.user.email
+                        }, { merge: true }).catch(e => console.warn(e));
                     }
                 }
                 return;
 
             } catch (error) {
                 console.error("Native Apple Sign-In Failed:", error);
+                // Dont fallback immediately on native to avoid confusion
                 throw error;
             }
         }

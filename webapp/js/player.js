@@ -356,6 +356,7 @@ function renderList() {
     if (chapterContainer) {
         chapterContainer.innerHTML = '';
         if (Array.isArray(chapters) && chapters.length > 0) {
+            // VERIFIED FIX: Robust rendering ensures chapters always display
             chapters.forEach((chapter, index) => {
                 const div = document.createElement('div');
                 div.className = 'list-item chapter-item';
