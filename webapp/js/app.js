@@ -220,7 +220,7 @@ function initApp() {
 
             } catch (e) {
                 console.error("Error syncing data on login:", e);
-                alert("Login Sync Error: " + e.message); // Help user report issues
+                console.error("Login Sync Error: " + e.message);
             }
         } else {
             // Ensure guest mode if not logged in
@@ -631,7 +631,7 @@ function initApp() {
                 subBtn.disabled = false;
                 setTimeout(() => subBtn.textContent = "Subscribe Now", 3000);
             }
-            alert("Store Error: " + e.message);
+            console.error("Store Error: " + e.message);
         });
 
         // 3. Refresh Store
@@ -664,11 +664,11 @@ function initApp() {
                     window.globalUserProfile.subscriptionStatus = 'active';
                     localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
                 }
-                alert("Subscription Successful (Simulated Host)");
+                console.log("Subscription Successful (Simulated Host)");
                 window.closeModal('subscription-modal');
                 window.location.reload();
             } catch (e) {
-                alert("Sim fail: " + e.message);
+                console.error("Sim fail: " + e.message);
             } finally {
                 subBtn.textContent = originalText;
                 subBtn.disabled = false;
@@ -845,7 +845,7 @@ function initApp() {
     if (!window.firebaseHelpers) {
         console.error("CRITICAL: firebaseHelpers not found!");
         updateSplashProgress(0, "Error: SDK Missing");
-        setTimeout(() => alert("System Error: Firebase not initialized."), 500);
+        setTimeout(() => console.error("System Error: Firebase not initialized."), 500);
         return;
     }
 

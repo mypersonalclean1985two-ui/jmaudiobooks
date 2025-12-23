@@ -12,7 +12,7 @@ const firebaseConfig = {
 console.log("Firebase: Starting initialization...");
 if (typeof firebase === 'undefined') {
     console.error("Firebase SDK not found! Local load failed.");
-    alert("System Error: Firebase SDK could not be loaded locally. This usually means the app files are corrupted or the internal server is blocked. Please try restarting the app.");
+    console.error("System Error: Firebase SDK could not be loaded locally.");
     // Stop execution here or provide fallbacks
 } else {
     try {
@@ -22,7 +22,7 @@ if (typeof firebase === 'undefined') {
         }
     } catch (e) {
         console.error("Firebase: Initialization failed!", e);
-        alert("Firebase Init Error: " + e.message);
+        console.error("Firebase Init Error: " + e.message);
     }
 }
 
@@ -268,7 +268,7 @@ window.firebaseHelpers = {
             // Use default source (cache then server) for better mobile reliability
             const snapshot = await db.collection('books').get();
             console.log(`getBooks: Successfully fetched ${snapshot.docs.length} books.`);
-            if (window.Capacitor) alert(`Diagnostic: Successfully loaded ${snapshot.docs.length} books.`);
+            if (window.Capacitor) console.log(`Diagnostic: Successfully loaded ${snapshot.docs.length} books.`);
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error('Error getting books:', error);
