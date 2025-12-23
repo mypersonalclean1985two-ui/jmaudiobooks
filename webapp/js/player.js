@@ -355,25 +355,30 @@ function renderList() {
     const chapterContainer = document.getElementById('chapter-list');
     if (chapterContainer) {
         chapterContainer.innerHTML = '';
-        chapters.forEach((chapter, index) => {
-            const div = document.createElement('div');
-            div.className = 'list-item chapter-item';
-            div.innerHTML = `<div><div class="item-title">${chapter.title}</div><div class="item-sub">${formatTime(chapter.start)}</div></div>`;
-            div.onclick = () => {
-                if (chapter.fileUrl) {
-                    if (audioPlayer.src !== chapter.fileUrl) {
-                        audioPlayer.src = chapter.fileUrl;
-                        audioPlayer.load();
+        if (Array.isArray(chapters) && chapters.length > 0) {
+            chapters.forEach((chapter, index) => {
+                const div = document.createElement('div');
+                div.className = 'list-item chapter-item';
+                div.innerHTML = `<div><div class="item-title">${chapter.title}</div><div class="item-sub">${formatTime(chapter.start)}</div></div>`;
+                div.onclick = () => {
+                    if (chapter.fileUrl) {
+                        if (audioPlayer.src !== chapter.fileUrl) {
+                            audioPlayer.src = chapter.fileUrl;
+                            audioPlayer.load();
+                        }
+                    } else {
+                        audioPlayer.currentTime = chapter.start;
                     }
-                } else {
-                    audioPlayer.currentTime = chapter.start;
-                }
-                audioPlayer.play();
-                document.querySelectorAll('.chapter-item').forEach(el => el.classList.remove('active'));
-                div.classList.add('active');
-            };
-            chapterContainer.appendChild(div);
-        });
+                    audioPlayer.play();
+                    document.querySelectorAll('.chapter-item').forEach(el => el.classList.remove('active'));
+                    div.classList.add('active');
+                };
+                chapterContainer.appendChild(div);
+            });
+        } else {
+            console.warn("renderList: Chapters is empty or not an array", chapters);
+            chapterContainer.innerHTML = '<div style="padding:16px; color:#aaa; text-align:center">No chapters available</div>';
+        }
         chapterItemsCache = null; // Invalidate cache
         updateActiveChapter();
     }
