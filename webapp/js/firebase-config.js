@@ -122,7 +122,6 @@ window.firebaseHelpers = {
             await auth.signInWithRedirect(provider);
         } catch (error) {
             console.error('Error signing in with Google:', error);
-            alert("Diagnostic: Google Login Error - " + error.message);
             throw error;
         }
     },
@@ -203,7 +202,6 @@ window.firebaseHelpers = {
             await auth.signInWithRedirect(provider);
         } catch (error) {
             console.error('Error signing in with Apple:', error);
-            alert("Diagnostic: Apple Login Error - " + error.message);
             throw error;
         }
     },
@@ -276,7 +274,7 @@ window.firebaseHelpers = {
     getBooks: async () => {
         try {
             console.log("getBooks: Fetching from Firestore...");
-            if (window.Capacitor) alert("Diagnostic: Requesting bookshelf from Firestore...");
+            console.log("getBooks: Fetching from Firestore...");
             // Use default source (cache then server) for better mobile reliability
             const snapshot = await db.collection('books').get();
             console.log(`getBooks: Successfully fetched ${snapshot.docs.length} books.`);
@@ -284,7 +282,7 @@ window.firebaseHelpers = {
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error('Error getting books:', error);
-            alert("Diagnostic: Error fetching books - " + error.message);
+            console.error('Error getting books:', error);
             return [];
         }
     },
