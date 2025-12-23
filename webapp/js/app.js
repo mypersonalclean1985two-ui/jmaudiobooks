@@ -405,9 +405,9 @@ function initApp() {
         const closeBtn = document.getElementById('close-login-modal');
         if (closeBtn) {
             closeBtn.onclick = () => {
-                loginModal.style.display = 'none';
-                errorDiv.style.display = 'none';
-                successDiv.style.display = 'none';
+                if (loginModal) loginModal.style.display = 'none';
+                if (errorDiv) errorDiv.style.display = 'none';
+                if (successDiv) successDiv.style.display = 'none';
             };
         } else { console.warn("Auth: Close button not found"); }
 
@@ -473,16 +473,20 @@ function initApp() {
                 try {
                     googleSignInBtn.classList.add('auth-loading');
                     googleSignInBtn.disabled = true;
-                    errorDiv.style.display = 'none';
+                    if (errorDiv) errorDiv.style.display = 'none';
                     await window.firebaseHelpers.signInWithGoogle();
-                    loginModal.style.display = 'none';
+                    if (loginModal) loginModal.style.display = 'none';
                 } catch (err) {
                     console.error(err);
-                    errorDiv.textContent = err.message;
-                    errorDiv.style.display = 'block';
+                    if (errorDiv) {
+                        errorDiv.textContent = err.message;
+                        errorDiv.style.display = 'block';
+                    }
                 } finally {
-                    googleSignInBtn.classList.remove('auth-loading');
-                    googleSignInBtn.disabled = false;
+                    if (googleSignInBtn) {
+                        googleSignInBtn.classList.remove('auth-loading');
+                        googleSignInBtn.disabled = false;
+                    }
                 }
             };
         }
@@ -493,16 +497,20 @@ function initApp() {
                 try {
                     appleSignInBtn.classList.add('auth-loading');
                     appleSignInBtn.disabled = true;
-                    errorDiv.style.display = 'none';
+                    if (errorDiv) errorDiv.style.display = 'none';
                     await window.firebaseHelpers.signInWithApple();
-                    loginModal.style.display = 'none';
+                    if (loginModal) loginModal.style.display = 'none';
                 } catch (err) {
                     console.error(err);
-                    errorDiv.textContent = err.message;
-                    errorDiv.style.display = 'block';
+                    if (errorDiv) {
+                        errorDiv.textContent = err.message;
+                        errorDiv.style.display = 'block';
+                    }
                 } finally {
-                    appleSignInBtn.classList.remove('auth-loading');
-                    appleSignInBtn.disabled = false;
+                    if (appleSignInBtn) {
+                        appleSignInBtn.classList.remove('auth-loading');
+                        appleSignInBtn.disabled = false;
+                    }
                 }
             };
         }
@@ -510,17 +518,20 @@ function initApp() {
         // Email/Password Auth
         if (btn) {
             btn.onclick = async () => {
+                if (!emailInput || !passwordInput || !nameInput) return;
                 const email = emailInput.value.trim();
                 const password = passwordInput.value;
                 const name = nameInput.value.trim();
 
-                errorDiv.style.display = 'none';
-                successDiv.style.display = 'none';
+                if (errorDiv) errorDiv.style.display = 'none';
+                if (successDiv) successDiv.style.display = 'none';
 
                 // Validation
                 if (!email || !password || (!isLogin && !name)) {
-                    errorDiv.textContent = 'Please fill in all fields';
-                    errorDiv.style.display = 'block';
+                    if (errorDiv) {
+                        errorDiv.textContent = 'Please fill in all fields';
+                        errorDiv.style.display = 'block';
+                    }
                     return;
                 }
 
@@ -536,22 +547,28 @@ function initApp() {
                             throw new Error('Password is too weak. Use at least 8 characters with letters and numbers.');
                         }
                         await window.firebaseHelpers.signUpWithEmail(email, password, name);
-                        successDiv.textContent = 'Account created! Welcome.';
-                        successDiv.style.display = 'block';
+                        if (successDiv) {
+                            successDiv.textContent = 'Account created! Welcome.';
+                            successDiv.style.display = 'block';
+                        }
                     }
 
                     setTimeout(() => {
-                        loginModal.style.display = 'none';
-                        errorDiv.style.display = 'none';
-                        successDiv.style.display = 'none';
+                        if (loginModal) loginModal.style.display = 'none';
+                        if (errorDiv) errorDiv.style.display = 'none';
+                        if (successDiv) successDiv.style.display = 'none';
                     }, isLogin ? 0 : 2000);
                 } catch (err) {
                     console.error(err);
-                    errorDiv.textContent = err.message;
-                    errorDiv.style.display = 'block';
+                    if (errorDiv) {
+                        errorDiv.textContent = err.message;
+                        errorDiv.style.display = 'block';
+                    }
                 } finally {
-                    btn.classList.remove('auth-loading');
-                    btn.disabled = false;
+                    if (btn) {
+                        btn.classList.remove('auth-loading');
+                        btn.disabled = false;
+                    }
                 }
             };
         }
@@ -569,13 +586,15 @@ function initApp() {
         });
 
         // Click outside to close
-        loginModal.onclick = (e) => {
-            if (e.target === loginModal) {
-                loginModal.style.display = 'none';
-                errorDiv.style.display = 'none';
-                successDiv.style.display = 'none';
-            }
-        };
+        if (loginModal) {
+            loginModal.onclick = (e) => {
+                if (e.target === loginModal) {
+                    loginModal.style.display = 'none';
+                    if (errorDiv) errorDiv.style.display = 'none';
+                    if (successDiv) successDiv.style.display = 'none';
+                }
+            };
+        }
     }
 
     // Initialize the login modal
@@ -1650,14 +1669,6 @@ if (document.readyState === 'loading') {
 }
 
 // Modal Helper Functions (must be outside DOMContentLoaded so they're always available)
-window.showModal = function (modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.style.alignItems = 'flex-end'; // Match CSS modal class
-    }
-};
-
 window.showModal = function (modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
