@@ -1698,25 +1698,13 @@ async function openPlayer(bookOrId) {
             return;
         }
 
-        // FIX: Check if file is PDF or missing, and use sample audio for testing
-        let fileUrl = book.fileUrl; // Extract from book object
+        // PASS RAW FILE URL
+        // If it's a storage path, player.js will fetch it while the UI is shown.
+        let fileUrl = book.fileUrl;
 
-        // ERROR HANDLING: Check for Storage SDK
-        if (!window.firebaseStorage && fileUrl && !fileUrl.startsWith('http')) {
-            console.error("CRITICAL: Firebase Storage not initialized. Using sample.");
+        if (!fileUrl || fileUrl.endsWith('.pdf')) {
+            console.warn("PDF or missing file detected. Using sample audio.");
             fileUrl = 'audio/sample.mp3';
-        }
-        else if (!fileUrl || fileUrl.endsWith('.pdf')) {
-            console.warn("PDF or missing file detected. Using sample audio for demonstration.");
-            fileUrl = 'audio/sample.mp3';
-        } else if (fileUrl && !fileUrl.startsWith('http') && !fileUrl.startsWith('audio/')) {
-            // Try to get download URL if it's a storage path
-            try {
-                fileUrl = await window.firebaseStorage.ref(fileUrl).getDownloadURL();
-            } catch (e) {
-                console.warn("Could not fetch storage URL, using sample.", e);
-                fileUrl = 'audio/sample.mp3';
-            }
         }
         // Pass book data to player
         const params = new URLSearchParams({

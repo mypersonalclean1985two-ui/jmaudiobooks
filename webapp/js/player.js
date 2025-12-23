@@ -37,10 +37,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     const coverUrl = urlParams.get('cover');
     const author = urlParams.get('author');
 
-    // 2. IMMEDIATE AUDIO INITIALIZATION (DO NOT WAIT)
+    // 2. IMMEDIATE ASYNC PREP
     if (audioUrl) {
-        audioPlayer.src = audioUrl;
-        audioPlayer.load(); // Start buffering now
+        if (!audioUrl.startsWith('http') && !audioUrl.startsWith('audio/')) {
+            // It's a storage path! Fetch in background while UI shows.
+            const loadingText = document.getElementById('loading-text');
+            if (loadingText) {
+                loadingText.style.opacity = '1';
+                loadingText.innerHTML = `<span class="buffer-spinner"></span> Resolving Link...`;
+            }
+
+            window.firebaseStorage.ref(audioUrl).getDownloadURL().then(url => {
+                audioPlayer.src = url;
+                audioPlayer.currentTime = startPosition;
+                audioPlayer.play().catch(e => console.warn("Auto-play blocked:", e));
+                if (loadingText) loadingText.style.opacity = '0';
+            }).catch(err => {
+                console.error("Failed to resolve storage URL, falling back to sample.", err);
+                audioPlayer.src = 'audio/sample.mp3';
+                audioPlayer.play();
+            });
+        } else {
+            // Direct URL
+            audioPlayer.src = audioUrl;
+            audioPlayer.currentTime = startPosition;
+            audioPlayer.play().catch(e => console.warn("Auto-play blocked:", e));
+        }
     }
 
     // Set UI Info
@@ -54,10 +76,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Resume Logic
     const savedReading = localStorage.getItem('currentlyReading');
+    let startPosition = 0;
     if (savedReading) {
         const savedData = JSON.parse(savedReading);
         if (savedData.bookId === bookId) {
-            audioPlayer.currentTime = savedData.currentTime || 0;
+            startPosition = savedData.currentTime || 0;
         }
     }
 
