@@ -134,9 +134,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         chapters = currentBook.chapters;
                         renderList();
                     } else {
-                        console.warn("Player: No chapters array found in book data. Using default/fallback.");
-                        // Optional: Could try to generate chapters from duration if needed, 
-                        // but for now we stick to the default "Audiobook" item to avoid breaking.
+                        console.warn("Player: No chapters array found. Creating default 'Full Audio' chapter.");
+                        // Create a single chapter representing the whole book
+                        chapters = [{
+                            title: currentBook.title || "Full Audiobook",
+                            start: 0,
+                            duration: audioPlayer.duration || 0 // Will update on metadata load
+                        }];
+                        renderList();
                     }
                 } else {
                     console.error("Player: Book document does not exist!", bookId);
