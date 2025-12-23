@@ -1193,6 +1193,66 @@ function initApp() {
                     <span class="stat-label">Streak</span>
                 </div>
             </div>
+            </div>
+            
+            <!-- Subscription Info Block -->
+            ${(() => {
+                let statusHtml = '';
+                const isGuest = userProfile.isGuest;
+                const isSubscribed = userProfile.subscriptionStatus === 'active';
+
+                // Calculate Trial Days
+                let trialDaysLeft = 0;
+                if (!isGuest && userProfile.trialStartDate) {
+                    const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
+                    const now = new Date();
+                    const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+                    trialDaysLeft = Math.max(0, 14 - diffDays);
+                }
+
+                if (isSubscribed) {
+                    statusHtml = `
+                        <div style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);padding:16px;border-radius:16px;margin-bottom:16px;color:white;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 20px rgba(16,185,129,0.3);">
+                            <div>
+                                <div style="font-weight:700;font-size:1.1rem;">Premium Active</div>
+                                <div style="font-size:0.85rem;opacity:0.9;">Unlimited Access</div>
+                            </div>
+                            <div style="font-size:2rem;">✨</div>
+                        </div>
+                    `;
+                } else if (!isGuest) {
+                    // Trial or Expired
+                    if (trialDaysLeft > 0) {
+                        statusHtml = `
+                            <div style="background:var(--bg-card);padding:16px;border-radius:16px;margin-bottom:16px;border:1px solid var(--accent-primary);display:flex;align-items:center;justify-content:space-between;">
+                                <div>
+                                    <div style="font-weight:700;color:var(--accent-primary);font-size:1.1rem;">Free Trial Active</div>
+                                    <div style="font-size:0.85rem;color:var(--text-secondary);">${trialDaysLeft} days remaining</div>
+                                </div>
+                                <button onclick="window.openSubscriptionModal()" style="background:var(--accent-primary);color:white;border:none;padding:8px 16px;border-radius:20px;font-weight:600;font-size:0.9rem;cursor:pointer;">Upgrade</button>
+                            </div>
+                        `;
+                    } else {
+                        statusHtml = `
+                            <div style="background:var(--bg-card);padding:16px;border-radius:16px;margin-bottom:16px;border:1px solid #ef4444;display:flex;align-items:center;justify-content:space-between;">
+                                <div>
+                                    <div style="font-weight:700;color:#ef4444;font-size:1.1rem;">Trial Expired</div>
+                                    <div style="font-size:0.85rem;color:var(--text-secondary);">Unlock full access</div>
+                                </div>
+                                <button onclick="window.openSubscriptionModal()" style="background:#ef4444;color:white;border:none;padding:8px 16px;border-radius:20px;font-weight:600;font-size:0.9rem;cursor:pointer;">Subscribe</button>
+                            </div>
+                        `;
+                    }
+                } else {
+                    // Guest
+                    statusHtml = `
+                        <div style="background:var(--bg-card);padding:16px;border-radius:16px;margin-bottom:16px;border:1px dashed var(--text-secondary);text-align:center;">
+                            <div style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Log in to save your progress and start your free trial.</div>
+                        </div>
+                    `;
+                }
+                return statusHtml;
+            })()}
         </div>
 
         <div class="profile-menu">
