@@ -7,7 +7,8 @@
         "deploy": "firebase deploy",
         "deploy:hosting": "firebase deploy --only hosting",
         "deploy:firestore": "firebase deploy --only firestore",
-        "deploy:storage": "firebase deploy --only storage"
+        "deploy:storage": "firebase deploy --only storage",
+        "postinstall": "patch-package"
     },
     "dependencies": {
         "@capacitor/cli": "^8.0.0",
@@ -17,6 +18,7 @@
         "firebase-admin": "^12.7.0"
     },
     "devDependencies": {
-        "firebase-tools": "^13.0.0"
+        "firebase-tools": "^13.0.0",
+        "patch-package": "^8.0.1"
     }
 }
