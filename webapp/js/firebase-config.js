@@ -135,8 +135,8 @@ window.firebaseHelpers = {
                 // 1. Request from Apple
                 // 'clientId' and 'redirectURI' are optional/ignored for native, but good for completeness if config demands
                 const response = await SignInWithApple.authorize({
-                    clientId: 'com.jmaudiobooks.auth', // bundle id
-                    redirectURI: 'https://jmaudiobooks.firebaseapp.com/__/auth/handler',
+                    clientId: 'com.jmaudiobooks.jmaudiobooks', // Match Bundle ID
+                    redirectURI: 'https://book-258ee.firebaseapp.com/__/auth/handler',
                     scopes: 'name email',
                     state: 'INIT_SIGNIN'
                 });

@@ -12,13 +12,26 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       
-      // Reading progress subcollection
+      // Reading progress subcollection (Legacy & Standard)
       match /readingProgress/{bookId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /progress/{bookId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
       
       // Stats subcollection
       match /stats/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Bookmarks subcollection
+      match /bookmarks/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Library subcollection (Legacy)
+      match /library/{document=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
