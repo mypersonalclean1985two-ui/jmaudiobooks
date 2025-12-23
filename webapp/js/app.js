@@ -313,28 +313,6 @@ function initApp() {
                     <!-- Success Message -->
                     <div id="auth-success" style="display:none;" class="auth-success-message"></div>
                     
-                    <!-- Divider -->
-                    <div class="auth-divider">SECURE SOCIAL LOGIN</div>
-                    
-                    <!-- Google Sign-In Button -->
-                    <button id="google-signin-btn" class="google-signin-btn">
-                        <svg class="google-icon" viewBox="0 0 24 24" width="24" height="24">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-. 34-1.43-. 34-2.25 0-.83.11-1.59.34-2.25V8.6H2.18C1.43 10.09 1 11.83 1 13.66s.43 3.57 1.18 5.09l2.85-2.22.81-.62z"/>
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                        </svg>
-                        <span>Continue with Google</span>
-                    </button>
-
-                    <!-- Apple Sign-In Button -->
-                    <button id="apple-signin-btn" class="apple-signin-btn">
-                        <svg class="apple-icon" viewBox="0 0 24 24" width="24" height="24">
-                            <path d="M15.073 13.25c.01 2.376 2.083 3.167 2.106 3.178-.018.06-0.327 1.12-1.077 2.217-.65 0.957-1.326 1.91-2.39 1.928-1.045.018-1.378-.62-2.576-.62-1.2 0-1.574.603-2.576.637-1.03.036-1.815-1.03-2.47-1.976-1.35-1.948-2.38-5.52-0.994-7.925 0.69-1.2 1.92-1.958 3.255-1.987 1.016-.024 1.975.684 2.597.684.62 0 1.782-.845 3.007-.72 0.513.02 1.954.21 2.878 1.56-.073.045-1.72 1.006-1.753 2.946M12.96 4.63c.55-.67 0.92-1.603 0.82-2.53-.79.032-1.75.526-2.316 1.185-.506.58-.948 1.516-.83 2.41 0.885.068 1.78-.396 2.326-1.065"/>
-                        </svg>
-                        <span>Continue with Apple</span>
-                    </button>
-                    
                     <!-- Toggle between Login/Signup -->
                     <div style="text-align:center;margin-top:10px;">
                         <span id="auth-switch-text" style="color:var(--text-secondary);">Don't have an account? </span>
@@ -363,8 +341,6 @@ function initApp() {
         const successDiv = document.getElementById('auth-success');
         const forgotPasswordLink = document.getElementById('forgot-password-link');
         const forgotPasswordContainer = document.getElementById('forgot-password-container');
-        const googleSignInBtn = document.getElementById('google-signin-btn');
-        const appleSignInBtn = document.getElementById('apple-signin-btn');
         const strengthContainer = document.getElementById('password-strength');
         const strengthFill = document.getElementById('strength-fill');
         const strengthText = document.getElementById('strength-text');
@@ -467,53 +443,8 @@ function initApp() {
             };
         }
 
-        // Google Sign-In
-        if (googleSignInBtn) {
-            googleSignInBtn.onclick = async () => {
-                try {
-                    googleSignInBtn.classList.add('auth-loading');
-                    googleSignInBtn.disabled = true;
-                    if (errorDiv) errorDiv.style.display = 'none';
-                    await window.firebaseHelpers.signInWithGoogle();
-                    if (loginModal) loginModal.style.display = 'none';
-                } catch (err) {
-                    console.error(err);
-                    if (errorDiv) {
-                        errorDiv.textContent = err.message;
-                        errorDiv.style.display = 'block';
-                    }
-                } finally {
-                    if (googleSignInBtn) {
-                        googleSignInBtn.classList.remove('auth-loading');
-                        googleSignInBtn.disabled = false;
-                    }
-                }
-            };
-        }
+        // Social Sign-In Logic Removed
 
-        // Apple Sign-In
-        if (appleSignInBtn) {
-            appleSignInBtn.onclick = async () => {
-                try {
-                    appleSignInBtn.classList.add('auth-loading');
-                    appleSignInBtn.disabled = true;
-                    if (errorDiv) errorDiv.style.display = 'none';
-                    await window.firebaseHelpers.signInWithApple();
-                    if (loginModal) loginModal.style.display = 'none';
-                } catch (err) {
-                    console.error(err);
-                    if (errorDiv) {
-                        errorDiv.textContent = err.message;
-                        errorDiv.style.display = 'block';
-                    }
-                } finally {
-                    if (appleSignInBtn) {
-                        appleSignInBtn.classList.remove('auth-loading');
-                        appleSignInBtn.disabled = false;
-                    }
-                }
-            };
-        }
 
         // Email/Password Auth
         if (btn) {
