@@ -60,6 +60,7 @@ window.firebaseStorage = storage;
 
 // Auth state observer
 auth.onAuthStateChanged((user) => {
+    window.authInitialized = true; // Mark as initialized immediately
     if (user) {
         console.log('User signed in:', user.email);
         window.currentUser = user;

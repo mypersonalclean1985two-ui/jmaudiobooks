@@ -85,13 +85,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.firebaseStorage.ref(audioUrl).getDownloadURL().then(url => {
                 audioPlayer.src = url;
                 audioPlayer.load(); // Explicit load triggers background buffer
-                audioPlayer.play().catch(e => console.warn("Auto-play blocked:", e));
+
+                // On iOS, auto-play often fails. We rely on the user's first tap.
+                // But we attempt it anyway for smoother desktop experience.
+                audioPlayer.play().catch(e => console.warn("Auto-play blocked (expected on mobile):", e));
+
                 if (loadingText) loadingText.style.opacity = '0';
             }).catch(err => {
                 console.error("Failed to resolve storage URL", err);
                 audioPlayer.src = 'audio/sample.mp3';
                 audioPlayer.load();
-                audioPlayer.play();
+                audioPlayer.play().catch(e => { });
             });
         } else {
             audioPlayer.src = audioUrl;
@@ -141,10 +145,14 @@ function setupControls() {
     const progressContainer = document.getElementById('progress-container');
 
     playBtn.addEventListener('click', () => {
-        if (!window.currentUser) {
-            window.location.href = 'index.html';
+        // PREVENTION: Don't redirect if auth is still initializing
+        if (!window.authInitialized) {
+            console.log("Playback blocked: Auth initializing...");
             return;
         }
+
+        // If auth resolved and still no user, and we want to enforce login (optional)
+        // For now, our demo mode allows guests to play, so we check currentUser inside isTrialActive
 
         // SYNC CHECK for Gesture Preservation
         if (!cachedTrialStatus) {
@@ -272,7 +280,6 @@ function updateProgress() {
     const dt = (now - lastStatsUpdate) / 1000;
     if (dt > 0 && dt < 2 && !audioPlayer.paused) {
         sessionSeconds += dt;
-        if (Math.floor(audioPlayer.currentTime) % 5 === 0) console.log("Player Progress:", audioPlayer.currentTime);
     }
     lastStatsUpdate = now;
 
@@ -286,21 +293,26 @@ function updateProgress() {
     updateActiveChapter();
 
     if (Math.floor(audioPlayer.currentTime) % 10 === 0) {
-        if (sessionSeconds >= 60) {
-            const mins = Math.floor(sessionSeconds / 60);
-            stats.weekMinutes += mins;
-            sessionSeconds -= (mins * 60);
-            localStorage.setItem('stats', JSON.stringify(stats));
-        }
-        saveProgress();
-        const bookId = new URLSearchParams(window.location.search).get('id');
-        if (bookId) {
-            localStorage.setItem('currentlyReading', JSON.stringify({
-                bookId: bookId,
-                currentTime: audioPlayer.currentTime,
-                progress: Math.floor((audioPlayer.currentTime / audioPlayer.duration) * 100),
-                timestamp: Date.now()
-            }));
+        // Debounce to once per second
+        if (!window._lastSaveTime || Math.floor(audioPlayer.currentTime) !== window._lastSaveTime) {
+            window._lastSaveTime = Math.floor(audioPlayer.currentTime);
+
+            if (sessionSeconds >= 60) {
+                const mins = Math.floor(sessionSeconds / 60);
+                stats.weekMinutes += mins;
+                sessionSeconds -= (mins * 60);
+                localStorage.setItem('stats', JSON.stringify(stats));
+            }
+            saveProgress();
+            const bookId = new URLSearchParams(window.location.search).get('id');
+            if (bookId) {
+                localStorage.setItem('currentlyReading', JSON.stringify({
+                    bookId: bookId,
+                    currentTime: audioPlayer.currentTime,
+                    progress: Math.floor((audioPlayer.currentTime / audioPlayer.duration) * 100),
+                    timestamp: Date.now()
+                }));
+            }
         }
     }
 }
@@ -341,6 +353,7 @@ function renderList() {
             };
             chapterContainer.appendChild(div);
         });
+        chapterItemsCache = null; // Invalidate cache
         updateActiveChapter();
     }
 
@@ -366,9 +379,12 @@ function renderList() {
     updateChapterCount();
 }
 
+let chapterItemsCache = null;
 function updateActiveChapter() {
     const time = audioPlayer.currentTime;
-    const items = document.querySelectorAll('.chapter-item');
+    if (!chapterItemsCache) chapterItemsCache = document.querySelectorAll('.chapter-item');
+    const items = chapterItemsCache;
+
     chapters.forEach((ch, i) => {
         if (items[i]) {
             let isActive = false;
