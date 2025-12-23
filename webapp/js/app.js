@@ -15,6 +15,8 @@ function initApp() {
     const profilePreview = document.getElementById('edit-profile-preview');
     const profilePlaceholder = document.getElementById('edit-profile-placeholder');
 
+    window.authInitialized = false; // Track initialization state
+
     // Settings Elements
     const settingsModal = document.getElementById('settings-modal');
     const closeSettingsBtn = document.getElementById('close-settings-modal');
@@ -100,8 +102,10 @@ function initApp() {
 
     // Trial & Subscription Helper
     window.isTrialActive = () => {
-        if (!window.currentUser || userProfile.isGuest) return false;
-        if (!userProfile.trialStartDate) return true; // Failsafe for older accounts
+        // PERMISSIVE DEFAULTS: Don't block during sync or for guests who see "locked" content separately
+        if (!window.authInitialized) return true;
+        if (!window.currentUser || userProfile.isGuest) return true;
+        if (!userProfile.trialStartDate) return true;
 
         const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
         const now = new Date();
@@ -116,6 +120,7 @@ function initApp() {
     console.log("App: Registering onAuthStateChanged...");
     window.onAuthStateChanged = async (user) => {
         console.log("App: onAuthStateChanged fired. User:", user ? user.email : 'None');
+        window.authInitialized = true; // Mark as initialized
 
         // Close Login Modal if open (failsafe)
         if (window.loginModal) window.loginModal.style.display = 'none';
@@ -945,7 +950,7 @@ function initApp() {
         mainContent.innerHTML = `<div class="section-title">CONTINUE READING</div><div class="continue-reading-card" onclick="resumeReading()"><img src="${currentBook ? getCoverUrl(currentBook) : 'placeholder.svg'}" class="continue-reading-cover" alt="${currentBook?.title || 'Book'}" onerror="this.src='placeholder.svg'"><div class="continue-reading-info"><div><div class="continue-reading-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${currentBook?.title || 'No Book'}</div><div class="continue-reading-author">${currentBook?.author || ''}</div></div><div><div class="progress-bar"><div class="progress-fill" style="width:${currentlyReading?.progress || 0}%"></div></div><div class="progress-text">Chapter ${currentlyReading?.chapter || 0} of ${currentlyReading?.totalChapters || 0} - ${currentlyReading?.progress || 0}% completed</div><button class="resume-btn" onclick="event.stopPropagation();resumeReading();">Resume</button></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-label">Streak</div><div class="stat-value">${stats.streak} days</div></div><div class="stat-card"><div class="stat-icon">🕐</div><div class="stat-label">This week</div><div class="stat-value">${stats.weekMinutes} min</div></div><div class="stat-card"><div class="stat-icon">✓</div><div class="stat-label">Completed</div><div class="stat-value">${stats.completedBooks} books</div></div></div><div class="tabs-container">${tabsHtml}</div>`;
 
         // TRIAL WALL: If trial expired, show subscription overlay
-        if (!window.isTrialActive()) {
+        if (window.authInitialized && !window.isTrialActive()) {
             mainContent.innerHTML += `
                 <div style="background:var(--bg-card);border-radius:24px;padding:32px;text-align:center;margin:20px 0;border:1px solid var(--border-color);box-shadow:0 12px 40px rgba(0,0,0,0.3);">
                     <div style="font-size:3.5rem;margin-bottom:16px;">⌛</div>
@@ -1020,7 +1025,7 @@ function initApp() {
         }
 
         // TRIAL WALL: If trial expired, show subscription overlay
-        if (!window.isTrialActive()) {
+        if (window.authInitialized && !window.isTrialActive()) {
             mainContent.innerHTML = `
                 <div style="background:var(--bg-card);border-radius:24px;padding:32px;text-align:center;margin:20px 0;border:1px solid var(--border-color);box-shadow:0 12px 40px rgba(0,0,0,0.3);">
                     <div style="font-size:3.5rem;margin-bottom:16px;">⌛</div>
@@ -1692,6 +1697,7 @@ async function openPlayer(bookOrId) {
 
     try {
         // SUBSCRIPTION CHECK
+        const canAccess = window.isTrialActive();
         if (!canAccess) {
             console.log("Access blocked. Showing subscription modal.");
             window.openSubscriptionModal();
