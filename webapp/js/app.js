@@ -617,7 +617,9 @@ function initApp() {
 
                 console.log("Subscription Active! Thank you.");
                 window.closeModal('subscription-modal');
-                window.location.reload();
+                // Surgical refresh instead of full reload
+                renderHome();
+                renderDiscover();
             }
             p.finish();
         });
@@ -666,7 +668,8 @@ function initApp() {
                 }
                 console.log("Subscription Successful (Simulated Host)");
                 window.closeModal('subscription-modal');
-                window.location.reload();
+                renderHome();
+                renderDiscover();
             } catch (e) {
                 console.error("Sim fail: " + e.message);
             } finally {

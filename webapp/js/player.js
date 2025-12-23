@@ -13,6 +13,9 @@ let stats = { streak: 0, weekMinutes: 0, completedBooks: 0, lastPlayed: null };
 const savedStats = localStorage.getItem('stats');
 if (savedStats) stats = JSON.parse(savedStats);
 
+// Performance Cache: Trial Status
+let cachedTrialStatus = localStorage.getItem('trial_active') === 'true';
+
 // Mock Data
 const mockChapters = [
     { title: "Chapter 1: The Beginning", start: 0, duration: 60 },
@@ -26,27 +29,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Init Elements
     audioPlayer = document.getElementById('audio-player');
 
-    // Resume Logic: Load saved state from LocalStorage for seamless transition
-    // This handles the "Resume" button from Home
-    const savedReading = localStorage.getItem('currentlyReading');
-    let startPosition = 0;
-    if (savedReading) {
-        const savedData = JSON.parse(savedReading);
-        // Check if this player instance matches the saved book
-        const currentBookId = new URLSearchParams(window.location.search).get('id');
-        if (savedData.bookId === currentBookId) {
-            console.log("Resuming from saved position:", savedData.currentTime);
-            startPosition = savedData.currentTime || 0;
-        }
-    }
-
-    // Get Params
+    // 1. IMMEDIATE PARAMS CHECK (FASTEST)
     const urlParams = new URLSearchParams(window.location.search);
     const audioUrl = urlParams.get('file');
     const title = urlParams.get('title');
     const bookId = urlParams.get('id');
     const coverUrl = urlParams.get('cover');
     const author = urlParams.get('author');
+
+    // 2. IMMEDIATE AUDIO INITIALIZATION (DO NOT WAIT)
+    if (audioUrl) {
+        audioPlayer.src = audioUrl;
+        audioPlayer.load(); // Start buffering now
+    }
 
     // Set UI Info
     document.getElementById('book-title').textContent = title || 'Unknown Title';
@@ -57,50 +52,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('bg-blur').style.backgroundImage = `url('${coverUrl}')`;
     }
 
-    // Set Audio Source
-    if (audioUrl) {
-        audioPlayer.src = audioUrl;
-        audioPlayer.currentTime = startPosition; // Resume position
-    } else {
-        console.error('No audio file found');
+    // Resume Logic
+    const savedReading = localStorage.getItem('currentlyReading');
+    if (savedReading) {
+        const savedData = JSON.parse(savedReading);
+        if (savedData.bookId === bookId) {
+            audioPlayer.currentTime = savedData.currentTime || 0;
+        }
     }
 
-    // Load Chapters
-    // Load Chapters
-    if (title && (title.includes("Sample") || title.includes("Test"))) {
-        chapters = mockChapters;
-    } else if (window.currentBook && window.currentBook.chapters && window.currentBook.chapters.length > 0) {
-        chapters = window.currentBook.chapters;
-    } else {
-        chapters = [{ title: "Part 1", start: 0, duration: audioPlayer.duration || 0 }];
-    }
-
-    // Setup UI
+    // 3. BACKGROUND TASKS (DO NOT BLOCK PLAYBACK)
     setupControls();
-    renderList();
     updateChapterCount();
 
-    // Load User Data & Book Details
-    if (bookId) {
-        try {
-            // Fetch full book details to get chapters
-            const doc = await window.firebase.firestore().collection('books').doc(bookId).get();
-            if (doc.exists) {
-                window.currentBook = doc.data();
-                // Re-evaluate chapters with the fetched data
-                if (window.currentBook.chapters && window.currentBook.chapters.length > 0) {
-                    chapters = window.currentBook.chapters;
-                    renderList(); // Re-render list with chapters
-                }
-            }
-        } catch (e) {
-            console.error("Error fetching book details:", e);
-        }
+    // Default chapters until doc arrives
+    chapters = [{ title: "Audiobook", start: 0, duration: 0 }];
+    renderList();
 
-        if (window.currentUser) {
-            await loadProgress(bookId);
-            await loadBookmarks(bookId);
-        }
+    // Async Fetching
+    if (bookId) {
+        Promise.all([
+            window.firebase.firestore().collection('books').doc(bookId).get().then(doc => {
+                if (doc.exists) {
+                    window.currentBook = doc.data();
+                    if (window.currentBook.chapters && window.currentBook.chapters.length > 0) {
+                        chapters = window.currentBook.chapters;
+                        renderList();
+                    }
+                }
+            }),
+            window.currentUser ? loadProgress(bookId) : Promise.resolve(),
+            window.currentUser ? loadBookmarks(bookId) : Promise.resolve(),
+            isTrialActive(true) // Refresh cache in background
+        ]).catch(e => console.warn("Background fetch failed:", e));
     }
 });
 
@@ -124,8 +108,16 @@ function setupControls() {
 
         const active = await isTrialActive();
         if (!active) {
-            console.warn("Trial expired. Redirecting...");
-            window.location.href = 'index.html';
+            console.warn("Trial expired notification.");
+            // Instead of redirecting immediately, show a non-blocking toast or simple message
+            const loadingText = document.getElementById('loading-text');
+            if (loadingText) {
+                loadingText.style.opacity = '1';
+                loadingText.innerHTML = "Trial Expired. Please Subscribe to Play.";
+                setTimeout(() => window.location.href = 'index.html', 3000);
+            } else {
+                window.location.href = 'index.html';
+            }
             return;
         }
 
@@ -654,23 +646,36 @@ function formatTime(seconds) {
 }
 
 // Trial & Subscription Helper
-async function isTrialActive() {
+async function isTrialActive(forceRefresh = false) {
     if (!window.currentUser) return false;
+
+    // Use Cache if available and not forcing refresh
+    if (!forceRefresh && cachedTrialStatus === true) {
+        console.log("Using cached trial status: Active");
+        return true;
+    }
 
     try {
         const doc = await window.firebaseFirestore.collection('users').doc(window.currentUser.uid).get();
         if (!doc.exists) return false;
 
         const data = doc.data();
-        if (!data.trialStartDate) return true; // Failsafe
+        let active = true;
 
-        const start = data.trialStartDate.toDate ? data.trialStartDate.toDate() : new Date(data.trialStartDate);
-        const now = new Date();
-        const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+        if (data.trialStartDate) {
+            const start = data.trialStartDate.toDate ? data.trialStartDate.toDate() : new Date(data.trialStartDate);
+            const now = new Date();
+            const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+            active = diffDays <= 14;
+        }
 
-        return diffDays <= 14;
+        // Update Cache
+        cachedTrialStatus = active;
+        localStorage.setItem('trial_active', active.toString());
+
+        return active;
     } catch (e) {
         console.error("Trial check failed:", e);
-        return true; // Allow playback if check fails to avoid blocking users
+        return true; // Failsafe
     }
 }
