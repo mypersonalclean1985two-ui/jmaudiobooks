@@ -459,13 +459,25 @@ body {
 }
 
 #loading-text {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    padding: 16px 24px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 0.3s;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
-    gap: 6px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .buffer-spinner {
