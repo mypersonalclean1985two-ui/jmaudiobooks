@@ -1,0 +1,499 @@
+/* Premium Audio Player V2 - Mobile-First Design */
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --bg-dark: #0f172a;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    overflow-x: hidden;
+}
+
+/* Background Blur Effect */
+.player-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) brightness(0.3);
+    transform: scale(1.1);
+}
+
+.player-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* Header - Compact on Mobile */
+.player-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-top: 8px;
+}
+
+.back-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background 0.2s;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-btn:active {
+    background: var(--glass-bg);
+}
+
+.header-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.header-spacer {
+    width: 40px;
+}
+
+/* Cover Art - Responsive Sizing */
+.cover-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.cover-container {
+    width: 220px;
+    height: 220px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+@media (min-width: 480px) {
+    .cover-container {
+        width: 280px;
+        height: 280px;
+    }
+}
+
+.cover-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Book Info - Compact */
+.book-info {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.book-info h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.book-info p {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* Progress Bar */
+.progress-section {
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 6px;
+    background: var(--glass-bg);
+    border-radius: 3px;
+    position: relative;
+    cursor: pointer;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--text-primary);
+    border-radius: 3px;
+    width: 0%;
+    position: relative;
+}
+
+.progress-handle {
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    right: -7px;
+    top: -4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transform: scale(0);
+    transition: transform 0.2s;
+}
+
+.progress-bar-container:active .progress-handle {
+    transform: scale(1);
+}
+
+.time-display {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Main Controls */
+.main-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 28px;
+}
+
+.control-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.control-btn:active {
+    transform: scale(0.92);
+}
+
+.skip-btn {
+    font-size: 1.8rem;
+    opacity: 0.9;
+}
+
+.play-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    color: var(--bg-dark);
+    box-shadow: 0 6px 18px rgba(255, 255, 255, 0.2);
+}
+
+.play-btn svg {
+    width: 28px;
+    height: 28px;
+    fill: currentColor;
+    margin-left: 3px;
+}
+
+.play-btn.paused svg {
+    margin-left: 0;
+}
+
+/* Secondary Controls */
+.secondary-controls {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 12px;
+    margin-bottom: 24px;
+}
+
+.sec-btn {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    padding: 8px 14px;
+    border-radius: 18px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.2s;
+    min-height: 44px;
+}
+
+.sec-btn:active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* COLLAPSIBLE CHAPTER PANEL - The star of the show! */
+.chapter-panel {
+    margin-bottom: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.chapter-header {
+    width: 100%;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 52px;
+    /* Touch-friendly */
+}
+
+.chapter-header:active {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.chapter-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.chapter-icon {
+    font-size: 1.2rem;
+}
+
+.chapter-count {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 400;
+}
+
+.chapter-arrow,
+.bookmark-arrow {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-secondary);
+}
+
+.chapter-arrow.rotated,
+.bookmark-arrow.rotated {
+    transform: rotate(180deg);
+}
+
+/* Chapter List - Collapsible */
+.chapter-list {
+    max-height: 400px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.3s ease;
+    opacity: 1;
+}
+
+.chapter-list.collapsed {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+/* Mobile-specific chapter list sizing */
+@media (max-width: 768px) {
+    .chapter-list {
+        max-height: 40vh;
+    }
+}
+
+.list-item {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--glass-border);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+    min-height: 52px;
+    /* Touch-friendly */
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+.list-item:active {
+    background: var(--glass-bg);
+}
+
+.list-item.active {
+    background: rgba(102, 126, 234, 0.2);
+    border-left: 3px solid #667eea;
+}
+
+.item-title {
+    font-weight: 500;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+}
+
+.item-sub {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Modals (Speed/Sleep) */
+.bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #1e293b;
+    border-radius: 24px 24px 0 0;
+    padding: 24px;
+    box-sizing: border-box;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.bottom-sheet.open {
+    transform: translateY(0);
+}
+
+.sheet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sheet-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.close-sheet {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.option-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.option-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    padding: 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    min-height: 48px;
+    transition: all 0.2s;
+}
+
+.option-btn:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.option-btn.selected {
+    background: var(--primary-gradient);
+    border: none;
+}
+
+/* Overlay */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 90;
+}
+
+.overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Loading Overlay & Spinner */
+#loading-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    padding: 16px 24px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 0.3s;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.buffer-spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

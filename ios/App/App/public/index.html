@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>JM Audiobooks - Audio Player</title>
+    <link rel="stylesheet" href="css/style.css?v=5.0">
+    <link rel="stylesheet" href="css/auth.css?v=1.0">
+    <link rel="stylesheet" href="css/support.css?v=1.0">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="JM Audiobooks">
+
+    <!-- Firebase SDKs (Local Bundled Version for Reliability) -->
+    <script src="lib/firebase-app-compat.js"></script>
+    <script src="lib/firebase-auth-compat.js"></script>
+    <script src="lib/firebase-firestore-compat.js"></script>
+    <script src="lib/firebase-storage-compat.js"></script>
+
+    <!-- App Config & Initializers -->
+    <script src="js/firebase-config.js?v=12.0"></script>
+    <script src="js/category-utils.js?v=12.0"></script>
+    <script src="js/category-enhance.js?v=12.0"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Modern Splash Screen -->
+        <div id="splash-screen"
+            style="position:fixed;top:0;left:0;width:100%;height:100%;background:#090b0e;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);overflow:hidden;">
+            <!-- ... (splash content unchanged) ... -->
+        </div>
+
+        <!-- ... (rest of body unchanged) ... -->
+
+        <!-- Main Application Logic -->
+        <script src="js/app.js?v=12.0"></script>
+
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then(registration => {
+                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        })
+                        .catch(err => {
+                            console.log('ServiceWorker registration failed: ', err);
+                        });
+                });
+            }
+        </script>
+</body>
+
+</html>
