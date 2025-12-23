@@ -102,16 +102,32 @@ function initApp() {
 
     // Trial & Subscription Helper
     window.isTrialActive = () => {
-        // PERMISSIVE DEFAULTS: Don't block during sync or for guests who see "locked" content separately
+        // 1. If Subscribed, Trial logic is irrelevant (Always Access)
+        if (userProfile.subscriptionStatus === 'active') return true;
+
+        // 2. Permissive Defaults
         if (!window.authInitialized) return true;
         if (!window.currentUser || userProfile.isGuest) return true;
+
+        // 3. Check Date
         if (!userProfile.trialStartDate) return true;
 
         const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
         const now = new Date();
         const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
 
-        return diffDays <= 14; // 14-day rule
+        return diffDays <= 14;
+    };
+
+    window.getTrialDaysLeft = () => {
+        if (userProfile.subscriptionStatus === 'active') return '∞';
+        if (!userProfile.trialStartDate) return 14;
+
+        const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
+        const now = new Date();
+        const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+        const left = 14 - diffDays;
+        return left > 0 ? left : 0;
     };
 
     // Auth State Listener
@@ -930,7 +946,30 @@ function initApp() {
 
         const currentBook = books.find(b => b.id === currentlyReading?.bookId);
 
-        mainContent.innerHTML = `<div class="section-title">CONTINUE READING</div><div class="continue-reading-card" onclick="resumeReading()"><img src="${currentBook ? getCoverUrl(currentBook) : 'placeholder.svg'}" class="continue-reading-cover" alt="${currentBook?.title || 'Book'}" onerror="this.src='placeholder.svg'"><div class="continue-reading-info"><div><div class="continue-reading-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${currentBook?.title || 'No Book'}</div><div class="continue-reading-author">${currentBook?.author || ''}</div></div><div><div class="progress-bar"><div class="progress-fill" style="width:${currentlyReading?.progress || 0}%"></div></div><div class="progress-text">Chapter ${currentlyReading?.chapter || 0} of ${currentlyReading?.totalChapters || 0} - ${currentlyReading?.progress || 0}% completed</div><button class="resume-btn" onclick="event.stopPropagation();resumeReading();">Resume</button></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-label">Streak</div><div class="stat-value">${stats.streak} days</div></div><div class="stat-card"><div class="stat-icon">🕐</div><div class="stat-label">This week</div><div class="stat-value">${stats.weekMinutes} min</div></div><div class="stat-card"><div class="stat-icon">✓</div><div class="stat-label">Completed</div><div class="stat-value">${stats.completedBooks} books</div></div></div><div class="tabs-container">${tabsHtml}</div>`;
+        // TRIAL STATUS BANNER
+        let trialBanner = '';
+        if (window.authInitialized && !userProfile.isGuest && userProfile.subscriptionStatus !== 'active') {
+            const daysLeft = window.getTrialDaysLeft();
+            trialBanner = `
+                <div class="trial-banner" onclick="window.openSubscriptionModal()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); margin-bottom: 24px; border-radius: 16px; padding: 16px 20px; color: white; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); cursor: pointer;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 1rem; margin-bottom: 2px;">⚡ Free Trial Active</div>
+                        <div style="font-size: 0.85rem; opacity: 0.9;">${daysLeft} days remaining</div>
+                    </div>
+                    <button style="background: white; color: #059669; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;">Upgrade</button>
+                </div>
+            `;
+        } else if (window.authInitialized && userProfile.subscriptionStatus === 'active') {
+            // Optional: Smaller Premium Badge
+            trialBanner = `
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px; opacity:0.7;">
+                    <span style="background:var(--accent-primary); color:white; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:700;">PREMIUM</span>
+                    <span style="font-size:0.8rem; color:var(--text-secondary);">Unlimited Access Unlocked</span>
+                </div>
+             `;
+        }
+
+        mainContent.innerHTML = trialBanner + `<div class="section-title">CONTINUE READING</div><div class="continue-reading-card" onclick="resumeReading()"><img src="${currentBook ? getCoverUrl(currentBook) : 'placeholder.svg'}" class="continue-reading-cover" alt="${currentBook?.title || 'Book'}" onerror="this.src='placeholder.svg'"><div class="continue-reading-info"><div><div class="continue-reading-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${currentBook?.title || 'No Book'}</div><div class="continue-reading-author">${currentBook?.author || ''}</div></div><div><div class="progress-bar"><div class="progress-fill" style="width:${currentlyReading?.progress || 0}%"></div></div><div class="progress-text">Chapter ${currentlyReading?.chapter || 0} of ${currentlyReading?.totalChapters || 0} - ${currentlyReading?.progress || 0}% completed</div><button class="resume-btn" onclick="event.stopPropagation();resumeReading();">Resume</button></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-label">Streak</div><div class="stat-value">${stats.streak} days</div></div><div class="stat-card"><div class="stat-icon">🕐</div><div class="stat-label">This week</div><div class="stat-value">${stats.weekMinutes} min</div></div><div class="stat-card"><div class="stat-icon">✓</div><div class="stat-label">Completed</div><div class="stat-value">${stats.completedBooks} books</div></div></div><div class="tabs-container">${tabsHtml}</div>`;
 
         // TRIAL WALL: If trial expired, show subscription overlay
         if (window.authInitialized && !window.isTrialActive()) {
@@ -1166,6 +1205,15 @@ function initApp() {
             ? `<button class="btn-primary" style="width:100%;margin-bottom:12px;" id="login-btn">Log In</button>`
             : `<button class="btn-secondary" style="width:100%;color:#ef4444;" id="logout-btn"><span>🚪</span> Log Out</button>`;
 
+        let subBtnHtml = '';
+        if (!userProfile.isGuest) {
+            if (userProfile.subscriptionStatus === 'active') {
+                subBtnHtml = `<div style="background:rgba(16, 185, 129, 0.1); border:1px solid #10b981; padding:12px; border-radius:12px; margin-bottom:12px; text-align:center; color:#10b981; font-weight:700;">✨ Premium Active</div>`;
+            } else {
+                subBtnHtml = `<button class="btn-primary" style="width:100%; margin-bottom:12px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);" id="upgrade-btn">💎 Get Premium</button>`;
+            }
+        }
+
         const editBtnHtml = `<button class="btn-primary" style="width:100%;" id="edit-profile-btn">Edit Profile</button>`;
         const settingsBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="settings-btn">⚙️ Settings</button>`;
         const supportBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="contact-support-btn">💬 Contact Support</button>`;
@@ -1193,70 +1241,11 @@ function initApp() {
                     <span class="stat-label">Streak</span>
                 </div>
             </div>
-            </div>
-            
-            <!-- Subscription Info Block -->
-            ${(() => {
-                let statusHtml = '';
-                const isGuest = userProfile.isGuest;
-                const isSubscribed = userProfile.subscriptionStatus === 'active';
-
-                // Calculate Trial Days
-                let trialDaysLeft = 0;
-                if (!isGuest && userProfile.trialStartDate) {
-                    const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
-                    const now = new Date();
-                    const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
-                    trialDaysLeft = Math.max(0, 14 - diffDays);
-                }
-
-                if (isSubscribed) {
-                    statusHtml = `
-                        <div style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);padding:16px;border-radius:16px;margin-bottom:16px;color:white;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 20px rgba(16,185,129,0.3);">
-                            <div>
-                                <div style="font-weight:700;font-size:1.1rem;">Premium Active</div>
-                                <div style="font-size:0.85rem;opacity:0.9;">Unlimited Access</div>
-                            </div>
-                            <div style="font-size:2rem;">✨</div>
-                        </div>
-                    `;
-                } else if (!isGuest) {
-                    // Trial or Expired
-                    if (trialDaysLeft > 0) {
-                        statusHtml = `
-                            <div style="background:var(--bg-card);padding:16px;border-radius:16px;margin-bottom:16px;border:1px solid var(--accent-primary);display:flex;align-items:center;justify-content:space-between;">
-                                <div>
-                                    <div style="font-weight:700;color:var(--accent-primary);font-size:1.1rem;">Free Trial Active</div>
-                                    <div style="font-size:0.85rem;color:var(--text-secondary);">${trialDaysLeft} days remaining</div>
-                                </div>
-                                <button onclick="window.openSubscriptionModal()" style="background:var(--accent-primary);color:white;border:none;padding:8px 16px;border-radius:20px;font-weight:600;font-size:0.9rem;cursor:pointer;">Upgrade</button>
-                            </div>
-                        `;
-                    } else {
-                        statusHtml = `
-                            <div style="background:var(--bg-card);padding:16px;border-radius:16px;margin-bottom:16px;border:1px solid #ef4444;display:flex;align-items:center;justify-content:space-between;">
-                                <div>
-                                    <div style="font-weight:700;color:#ef4444;font-size:1.1rem;">Trial Expired</div>
-                                    <div style="font-size:0.85rem;color:var(--text-secondary);">Unlock full access</div>
-                                </div>
-                                <button onclick="window.openSubscriptionModal()" style="background:#ef4444;color:white;border:none;padding:8px 16px;border-radius:20px;font-weight:600;font-size:0.9rem;cursor:pointer;">Subscribe</button>
-                            </div>
-                        `;
-                    }
-                } else {
-                    // Guest
-                    statusHtml = `
-                        <div style="background:var(--bg-card);padding:16px;border-radius:16px;margin-bottom:16px;border:1px dashed var(--text-secondary);text-align:center;">
-                            <div style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Log in to save your progress and start your free trial.</div>
-                        </div>
-                    `;
-                }
-                return statusHtml;
-            })()}
         </div>
 
         <div class="profile-menu">
             <div class="section-header"><div class="section-header-title">Account Settings</div></div>
+            ${subBtnHtml}
             ${userProfile.isGuest ? '' : editBtnHtml}
             ${loginBtnHtml}
             ${settingsBtnHtml}
