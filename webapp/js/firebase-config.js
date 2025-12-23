@@ -71,6 +71,7 @@ auth.onAuthStateChanged((user) => {
                 updates.email = user.email;
                 updates.displayName = user.displayName || 'User';
                 updates.photoURL = user.photoURL || '';
+                updates.trialStartDate = firebase.firestore.FieldValue.serverTimestamp();
                 updates.createdAt = firebase.firestore.FieldValue.serverTimestamp();
                 db.collection('users').doc(user.uid).set(updates);
 
@@ -156,6 +157,7 @@ window.firebaseHelpers = {
                 email: email,
                 displayName: displayName,
                 photoURL: '',
+                trialStartDate: firebase.firestore.FieldValue.serverTimestamp(),
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true }); // Merge to avoid overwriting if it somehow already exists
 

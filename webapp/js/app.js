@@ -98,6 +98,18 @@ function initApp() {
     let readingProgress = {};
     let stats = { streak: 0, weekMinutes: 0, completedBooks: 0 };
 
+    // Trial & Subscription Helper
+    window.isTrialActive = () => {
+        if (!window.currentUser || userProfile.isGuest) return false;
+        if (!userProfile.trialStartDate) return true; // Failsafe for older accounts
+
+        const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
+        const now = new Date();
+        const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+
+        return diffDays <= 14; // 14-day rule
+    };
+
     // Auth State Listener
     console.log("App: Registering onAuthStateChanged...");
     // Auth State Listener
@@ -141,6 +153,9 @@ function initApp() {
                     }
                     if (firestoreProfile.bio) {
                         userProfile.bio = firestoreProfile.bio;
+                    }
+                    if (firestoreProfile.trialStartDate) {
+                        userProfile.trialStartDate = firestoreProfile.trialStartDate;
                     }
                 } else {
                     // No Firestore profile? Check if we should migrate Guest Data
@@ -241,6 +256,13 @@ function initApp() {
             <div class="modal-content">
                  <span class="close-btn" id="close-login-modal">&times;</span>
                 <h2 id="auth-title">Log In</h2>
+                
+                <!-- Trial Messaging -->
+                <div id="trial-info" style="background:rgba(245,158,11,0.1);border:1px dashed var(--accent-primary);border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;">
+                    <p style="color:var(--accent-primary);font-weight:800;font-size:1.1rem;margin-bottom:4px;">🎁 START 14-DAY FREE TRIAL</p>
+                    <p style="color:rgba(255,255,255,0.7);font-size:0.85rem;">Unlimited access to all audiobooks</p>
+                </div>
+
                 <div style="display:flex;flex-direction:column;gap:16px;">
                     <!-- Name Field (only for signup) -->
                     <div id="name-field" style="display:none;">
@@ -256,7 +278,9 @@ function initApp() {
                     
                     <!-- Password Field with Toggle -->
                     <div>
-                        <label style="display:block;margin-bottom:8px;color:rgba(255,255,255,0.6);font-size:0.9rem;">Password</label>
+                        <p id="splash-status"
+                        style="color:rgba(255,255,255,0.7);font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;animation: statusFade 1.5s infinite;">
+                        Initializing...</p>
                         <div class="password-field-wrapper">
                             <input type="password" id="login-password" class="auth-input" placeholder="••••••••">
                             <button type="button" class="password-toggle-btn" id="toggle-password">👁️</button>
@@ -532,6 +556,157 @@ function initApp() {
     // Initialize the login modal
     createEnhancedLoginModal();
 
+    window.openLoginModal = (forced = false) => {
+        if (loginModal) {
+            loginModal.style.display = 'flex';
+            const closeBtn = document.getElementById('close-login-modal');
+            if (closeBtn) {
+                closeBtn.style.display = forced ? 'none' : 'block';
+            }
+            // Disable click outside if forced
+            if (forced) {
+                loginModal.onclick = null;
+            }
+        }
+    };
+
+    // IAP: Product Constants
+    const PRODUCT_ID_MONTHLY = 'premium_monthly'; // MUST Match App Store Connect
+
+    // IAP: Initialize Store
+    document.addEventListener('deviceready', function () {
+        if (!window.store) {
+            console.log('Store not available');
+            return;
+        }
+
+        // 1. Register Product
+        store.register({
+            id: PRODUCT_ID_MONTHLY,
+            type: store.PAID_SUBSCRIPTION,
+            alias: 'premium_monthly'
+        });
+
+        // 2. Setup Event Listeners
+        // Log all events for debugging
+        store.when('product').updated(function (p) {
+            console.log('IAP Update:', p);
+        });
+
+        // Handle Approved Purchase (User paid)
+        store.when(PRODUCT_ID_MONTHLY).approved(function (p) {
+            console.log('IAP Approved:', p);
+            // Verify receipt here (simulated verification for now)
+            p.verify();
+        });
+
+        // Handle Verified Purchase (Receipt valid)
+        store.when(PRODUCT_ID_MONTHLY).verified(async function (p) {
+            console.log('IAP Verified:', p);
+
+            if (window.currentUser) {
+                await window.firebaseHelpers.updateUserSubscription(window.currentUser.uid, {
+                    status: 'active',
+                    plan: 'monthly',
+                    expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+                    purchasedAt: new Date()
+                });
+
+                window.globalUserProfile.subscriptionStatus = 'active';
+                localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
+
+                alert("Subscription Active! Thank you.");
+                window.closeModal('subscription-modal');
+                window.location.reload();
+            }
+            p.finish();
+        });
+
+        // Handle Errors
+        store.error(function (e) {
+            console.error("IAP Error Global:", e);
+            const subBtn = document.getElementById('subscribe-btn');
+            if (subBtn) {
+                subBtn.textContent = "Subscribe Error";
+                subBtn.disabled = false;
+                setTimeout(() => subBtn.textContent = "Subscribe Now", 3000);
+            }
+            alert("Store Error: " + e.message);
+        });
+
+        // 3. Refresh Store
+        store.refresh();
+    });
+
+    // Real IAP Handler
+    async function handleSubscription() {
+        const subBtn = document.getElementById('subscribe-btn');
+        if (!subBtn) return;
+
+        // Check if plugin is ready
+        if (!window.store) {
+            // FALLBACK TO SIMULATION FOR WEB TESTING
+            console.warn("IAP: Store not found (Web Mode). Using Simulation.");
+            const originalText = subBtn.textContent;
+            subBtn.textContent = " Simulating Store...";
+            subBtn.disabled = true;
+
+            try {
+                await new Promise(r => setTimeout(r, 1500));
+                if (window.currentUser) {
+                    await window.firebaseHelpers.updateUserSubscription(window.currentUser.uid, {
+                        status: 'active',
+                        plan: 'monthly',
+                        expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+                        purchasedAt: new Date()
+                    });
+
+                    window.globalUserProfile.subscriptionStatus = 'active';
+                    localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
+                }
+                alert("Subscription Successful (Simulated Host)");
+                window.closeModal('subscription-modal');
+                window.location.reload();
+            } catch (e) {
+                alert("Sim fail: " + e.message);
+            } finally {
+                subBtn.textContent = originalText;
+                subBtn.disabled = false;
+            }
+            return;
+        }
+
+        // NATIVE IAP FLOW
+        const originalText = subBtn.textContent;
+        subBtn.textContent = "Contacting App Store...";
+        subBtn.disabled = true;
+
+        try {
+            // Trigger Order
+            store.order(PRODUCT_ID_MONTHLY);
+        } catch (e) {
+            console.error("IAP Order Error:", e);
+            alert("Could not start purchase: " + e.message);
+            subBtn.textContent = originalText;
+            subBtn.disabled = false;
+        }
+    }
+
+    window.openSubscriptionModal = () => {
+        window.showModal('subscription-modal');
+        // Close other modals if open
+        if (window.loginModal) window.loginModal.style.display = 'none';
+
+        // Attach listener to fresh button
+        const subBtn = document.getElementById('subscribe-btn');
+        if (subBtn) {
+            // Clone to remove old listeners
+            const newBtn = subBtn.cloneNode(true);
+            subBtn.parentNode.replaceChild(newBtn, subBtn);
+            newBtn.addEventListener('click', handleSubscription);
+        }
+    };
+
 
     function loadProgress() {
         const saved = localStorage.getItem('readingProgress');
@@ -540,6 +715,46 @@ function initApp() {
         if (savedReading) currentlyReading = JSON.parse(savedReading);
         const savedStats = localStorage.getItem('stats');
         if (savedStats) stats = JSON.parse(savedStats);
+
+        // Resume Fix: Find the TRUE latest book from readingProgress if currentlyReading is stale/empty
+        if (readingProgress && Object.keys(readingProgress).length > 0) {
+            let latestBookId = null;
+            let latestTime = 0;
+
+            Object.entries(readingProgress).forEach(([bid, data]) => {
+                // Check 'timestamp' (local) or 'lastRead' (firestore timestamp) or 'lastPlayed'
+                let ts = 0;
+                if (data.timestamp) ts = new Date(data.timestamp).getTime();
+                else if (data.lastRead && data.lastRead.seconds) ts = data.lastRead.seconds * 1000;
+                else if (data.lastPlayed && data.lastPlayed.seconds) ts = data.lastPlayed.seconds * 1000; // fallback
+
+                if (ts > latestTime) {
+                    latestTime = ts;
+                    latestBookId = bid;
+                }
+            });
+
+            if (latestBookId) {
+                // If we found a more recent book than what 'currentlyReading' thinks, OR if currentlyReading is null
+                const currentTs = currentlyReading ? (currentlyReading.timestamp || 0) : 0;
+                if (latestTime > currentTs) {
+                    console.log("Found more recent book in history:", latestBookId);
+                    // We need the book details (title, cover) to display it effectively
+                    // Try to find it in loaded books or readingProgress metadata
+                    const recentData = readingProgress[latestBookId];
+                    const bookFromList = books.find(b => b.id === latestBookId);
+
+                    currentlyReading = {
+                        bookId: latestBookId,
+                        ...recentData,
+                        title: bookFromList ? bookFromList.title : (recentData.title || 'Resume Book'),
+                        author: bookFromList ? bookFromList.author : (recentData.author || ''),
+                        coverUrl: bookFromList ? bookFromList.coverUrl : (recentData.coverUrl || '')
+                    };
+                    localStorage.setItem('currentlyReading', JSON.stringify(currentlyReading));
+                }
+            }
+        }
 
         // Load Profile
         const savedProfile = localStorage.getItem('userProfile');
@@ -589,43 +804,108 @@ function initApp() {
             if (greetingEl) greetingEl.textContent = greeting;
         }
     }
-    // Fetch books from Firebase
+    // Splash Screen Enhancement Logic
+    function initSplashAnimations() {
+        const marquee = document.getElementById('splash-marquee');
+        if (!marquee) return;
+
+        const demoTitles = [
+            'Atomic Habits', 'The Alchemist', 'Deep Work', 'Project Hail Mary',
+            'The Midnight Library', 'Dune', 'Sapiens', '1984', 'Educated',
+            'The Great Gatsby', 'Becoming', 'Zero to One', 'Thinking Fast and Slow',
+            'Circe', 'The Silent Patient', 'Anxious People', 'A Promised Land',
+            'The 7 Habits', 'Good to Great', 'Rich Dad Poor Dad', 'Harry Potter',
+            'Lord of the Rings', 'The Martian', 'Ready Player One', 'The Hobbit'
+        ];
+        const allTitles = [...demoTitles, ...demoTitles, ...demoTitles, ...demoTitles];
+
+        const createLayer = (isNear) => allTitles.sort(() => Math.random() - 0.5).map((t, i) => `
+            <div class="marquee-item ${isNear ? 'near' : ''}" style="--delay: ${Math.random() * 5}s;">
+                ${t}
+            </div>
+        `).join('');
+
+        marquee.innerHTML = `
+            <div class="marquee-layer-1">${createLayer(false)}</div>
+            <div class="marquee-layer-2">${createLayer(true)}</div>
+        `;
+    }
+    initSplashAnimations();
+
+    function updateSplashProgress(percent, status) {
+        const bar = document.getElementById('splash-progress');
+        const statusEl = document.getElementById('splash-status');
+        const percentEl = document.getElementById('splash-percent');
+        if (bar) bar.style.width = `${percent}%`;
+        if (statusEl) statusEl.textContent = status;
+        if (percentEl) percentEl.textContent = `${Math.round(percent)}%`;
+    }
+
+    // Fetch books from Firebase with progress tracking
     if (!window.firebaseHelpers) {
         console.error("CRITICAL: firebaseHelpers not found!");
-        alert("System Error: Firebase not initialized. Please refresh.");
+        updateSplashProgress(0, "Error: SDK Missing");
+        setTimeout(() => alert("System Error: Firebase not initialized."), 500);
         return;
     }
 
     console.log("Starting book fetch...");
-    if (window.Capacitor) alert("Diagnostic: Starting book fetch inside App...");
+    updateSplashProgress(20, "Connecting to Cloud...");
+
     window.firebaseHelpers.getBooks()
         .then(data => {
+            updateSplashProgress(60, "Processing Library...");
             console.log(`[DEBUG] Fetched ${data.length} books from Firestore.`);
-            if (data.length === 0) {
-                console.warn("No books returned from database.");
-            }
+
             books = data;
-            window.books = books; // Make accessible to openPlayer
+            window.books = books;
+
+            updateSplashProgress(80, "Resuming Session...");
             loadProgress();
             setGreeting();
+
             if (!currentlyReading && books.length > 0) {
-                currentlyReading = { bookId: books[0].id, progress: 0, chapter: 1, totalChapters: 1 }; // Default init
+                currentlyReading = { bookId: books[0].id, progress: 0, chapter: 1, totalChapters: 1 };
                 saveProgress();
             }
-            renderHome();
+
+            updateSplashProgress(100, "Ready!");
+
+            // Smooth exit
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                if (splash) {
+                    splash.style.opacity = '0';
+                    splash.style.transform = 'scale(1.1)';
+                    setTimeout(() => splash.remove(), 800);
+                }
+
+                // MANDATORY AUTH WALL: Force login if guest
+                if (!window.currentUser || userProfile.isGuest) {
+                    console.log("Auth Wall: Forcing login modal...");
+                    window.openLoginModal(true); // true = forced/no close
+                } else {
+                    renderHome();
+                }
+            }, 500);
         })
         .catch(error => {
             console.error('Error loading books:', error);
-            // Show alert on mobile for debugging
-            alert(`Mobile Debug - Book Load Failed: ${error.message}\nCode: ${error.code}`);
-            alert(`Error loading books: ${error.message}`);
-            mainContent.innerHTML = `<div style="text-align:center;padding:50px;">
-                <h3>Error loading books</h3>
-                <p>Could not connect to Firebase.</p>
-                <p>Code: ${error.code || 'N/A'}</p>
-                <p>Message: ${error.message || 'N/A'}</p>
-                <pre style="text-align:left;background:#f0f0f0;padding:10px;margin-top:20px;overflow:auto;">${JSON.stringify(error, null, 2)}</pre>
-            </div > `;
+            updateSplashProgress(0, "Connection Failed");
+
+            const splash = document.getElementById('splash-screen');
+            // Keep splash but show error inside glass card
+            const glassCard = document.querySelector('.splash-glass-card');
+            if (glassCard) {
+                glassCard.innerHTML = `
+                    <div style="font-size:4rem;margin-bottom:20px;">⚠️</div>
+                    <h3 style="color:#fff;margin-bottom:10px;">Load Error</h3>
+                    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">${error.message}</p>
+                    <button class="btn-primary" onclick="window.location.reload()" style="padding:10px 24px;border-radius:12px;">Retry Connection</button>
+                `;
+            } else if (splash) {
+                splash.remove();
+            }
         });
 
     function getCoverUrl(book) {
@@ -644,8 +924,32 @@ function initApp() {
             if (titleEl) titleEl.style.display = 'block';
         }
 
+        const uniqueCategories = [...new Set(books.map(b => b.category).filter(Boolean))].sort();
+        const tabsHtml = `
+            <div class="tab active" data-category="all">All Books</div>
+            ${uniqueCategories.map(cat => `<div class="tab" data-category="${cat}">${cat}</div>`).join('')}
+        `;
+
         const currentBook = books.find(b => b.id === currentlyReading?.bookId);
-        mainContent.innerHTML = `<div class="section-title">CONTINUE READING</div><div class="continue-reading-card" onclick="resumeReading()"><img src="${currentBook ? getCoverUrl(currentBook) : 'placeholder.svg'}" class="continue-reading-cover" alt="${currentBook?.title || 'Book'}" onerror="this.src='placeholder.svg'"><div class="continue-reading-info"><div><div class="continue-reading-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${currentBook?.title || 'No Book'}</div><div class="continue-reading-author">${currentBook?.author || ''}</div></div><div><div class="progress-bar"><div class="progress-fill" style="width:${currentlyReading?.progress || 0}%"></div></div><div class="progress-text">Chapter ${currentlyReading?.chapter || 0} of ${currentlyReading?.totalChapters || 0} - ${currentlyReading?.progress || 0}% completed</div><button class="resume-btn" onclick="event.stopPropagation();resumeReading();">Resume</button></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-label">Streak</div><div class="stat-value">${stats.streak} days</div></div><div class="stat-card"><div class="stat-icon">🕐</div><div class="stat-label">This week</div><div class="stat-value">${stats.weekMinutes} min</div></div><div class="stat-card"><div class="stat-icon">✓</div><div class="stat-label">Completed</div><div class="stat-value">${stats.completedBooks} books</div></div></div><div class="tabs-container"><div class="tab active" data-category="all">All Books</div><div class="tab" data-category="Fiction">Fiction</div><div class="tab" data-category="Sci-Fi">Sci-Fi</div><div class="tab" data-category="Mystery">Mystery</div><div class="tab" data-category="Romance">Romance</div><div class="tab" data-category="History">History</div><div class="tab" data-category="Business">Business</div><div class="tab" data-category="Thriller">Thriller</div><div class="tab" data-category="Biography">Biography</div></div><div class="books-grid" id="books-grid"></div><div class="section-header"><div class="section-header-title">Recommended</div><div class="see-all">See all ›</div></div><div class="books-grid grid-layout" id="recommended-grid"></div>`;
+
+        mainContent.innerHTML = `<div class="section-title">CONTINUE READING</div><div class="continue-reading-card" onclick="resumeReading()"><img src="${currentBook ? getCoverUrl(currentBook) : 'placeholder.svg'}" class="continue-reading-cover" alt="${currentBook?.title || 'Book'}" onerror="this.src='placeholder.svg'"><div class="continue-reading-info"><div><div class="continue-reading-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${currentBook?.title || 'No Book'}</div><div class="continue-reading-author">${currentBook?.author || ''}</div></div><div><div class="progress-bar"><div class="progress-fill" style="width:${currentlyReading?.progress || 0}%"></div></div><div class="progress-text">Chapter ${currentlyReading?.chapter || 0} of ${currentlyReading?.totalChapters || 0} - ${currentlyReading?.progress || 0}% completed</div><button class="resume-btn" onclick="event.stopPropagation();resumeReading();">Resume</button></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-label">Streak</div><div class="stat-value">${stats.streak} days</div></div><div class="stat-card"><div class="stat-icon">🕐</div><div class="stat-label">This week</div><div class="stat-value">${stats.weekMinutes} min</div></div><div class="stat-card"><div class="stat-icon">✓</div><div class="stat-label">Completed</div><div class="stat-value">${stats.completedBooks} books</div></div></div><div class="tabs-container">${tabsHtml}</div>`;
+
+        // TRIAL WALL: If trial expired, show subscription overlay
+        if (!window.isTrialActive()) {
+            mainContent.innerHTML += `
+                <div style="background:var(--bg-card);border-radius:24px;padding:32px;text-align:center;margin:20px 0;border:1px solid var(--border-color);box-shadow:0 12px 40px rgba(0,0,0,0.3);">
+                    <div style="font-size:3.5rem;margin-bottom:16px;">⌛</div>
+                    <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:8px;color:var(--text-primary);">Trial Expired</h2>
+                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$8.50/month</strong> to continue listening to your library.</p>
+                    <button class="btn-primary" style="width:100%;padding:14px;border-radius:16px;font-weight:700;">Subscribe Now</button>
+                    <p style="margin-top:16px;font-size:0.8rem;color:var(--text-secondary);opacity:0.6;">Cancel anytime • Ad-free experience</p>
+                </div>
+            `;
+        } else {
+            mainContent.innerHTML += `<div class="books-grid" id="books-grid"></div><div class="section-header"><div class="section-header-title">Recommended</div><div class="see-all">See all ›</div></div><div class="books-grid grid-layout" id="recommended-grid"></div>`;
+            renderBooksGrid(books.slice(0, 9), document.getElementById('books-grid'));
+            renderBooksGrid(books.slice(9, 15), document.getElementById('recommended-grid'));
+        }
         renderBooksGrid(books.slice(0, 9), document.getElementById('books-grid'));
         renderBooksGrid(books.slice(9, 15), document.getElementById('recommended-grid'));
 
@@ -705,8 +1009,23 @@ function initApp() {
             window.CategoryEnhance.renderBackButton('Discover Books', () => renderHome());
         }
 
-        // Get all unique categories
-        const categories = window.CategoryUtils ? window.CategoryUtils.getAllCategories(books) : [...new Set(books.map(b => b.category))].sort();
+        // TRIAL WALL: If trial expired, show subscription overlay
+        if (!window.isTrialActive()) {
+            mainContent.innerHTML = `
+                <div style="background:var(--bg-card);border-radius:24px;padding:32px;text-align:center;margin:20px 0;border:1px solid var(--border-color);box-shadow:0 12px 40px rgba(0,0,0,0.3);">
+                    <div style="font-size:3.5rem;margin-bottom:16px;">⌛</div>
+                    <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:8px;color:var(--text-primary);">Trial Expired</h2>
+                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$8.50/month</strong> to continue listening to your library.</p>
+                    <button class="btn-primary" style="width:100%;padding:14px;border-radius:16px;font-weight:700;" onclick="window.openSubscriptionModal()">Subscribe Now</button>
+                    <p style="margin-top:16px;font-size:0.8rem;color:var(--text-secondary);opacity:0.6;">Cancel anytime • Ad-free experience</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Dynamic Categories from available books
+        const categories = [...new Set(books.map(b => b.category).filter(Boolean))].sort();
+        // ... rest of the function (I'll use a more precise replacement)
 
         let discoveryHtml = `
             <div class="discovery-container">
@@ -718,9 +1037,8 @@ function initApp() {
             <div class="books-grid" id="trending-grid"></div>
         `;
 
-        // Add a row for each category
+        // Add a row for each category dynamically
         categories.forEach(cat => {
-            if (!cat) return;
             const safeId = cat.replace(/\s+/g, '-').toLowerCase();
             discoveryHtml += `
                 <div class="section-header"><div class="section-header-title">${cat}</div></div>
@@ -747,8 +1065,96 @@ function initApp() {
 
     }
 
-    function renderLibrary() {
-        mainContent.innerHTML = `<div class="section-header"><div class="section-header-title">My Library</div></div><div style="text-align:center;padding:60px 20px;color:var(--text-secondary);"><p style="font-size:4rem;margin-bottom:16px;">📚</p><p style="font-size:1.1rem;color:var(--text-primary);margin-bottom:8px;">Your library is empty</p><p style="font-size:0.9rem;">Books you save will appear here</p></div>`;
+    async function renderLibrary() {
+        mainContent.innerHTML = `
+            <div class="section-header"><div class="section-header-title">My Library</div></div>
+            <div id="library-container" style="min-height: 200px; display: flex; justify-content: center; align-items: center;">
+                <div class="loader"></div>
+            </div>
+        `;
+
+        if (!window.currentUser || userProfile.isGuest) {
+            document.getElementById('library-container').innerHTML = `
+                <div style="text-align:center;padding:60px 20px;color:var(--text-secondary);">
+                    <p style="font-size:3rem;margin-bottom:16px;">🔒</p>
+                    <p style="font-size:1.1rem;color:var(--text-primary);margin-bottom:8px;">Sign in to view Library</p>
+                    <p style="font-size:0.9rem;">Save books to read them later</p>
+                </div>`;
+            return;
+        }
+
+        try {
+            // Ensure currentUser is indeed set and not just a legacy pointer
+            if (!window.firebaseAuth.currentUser) {
+                console.warn("Library: User seems logged in UI but not in Firebase Auth. Waiting...");
+                // Brief poll to wait for Firebase
+                let waitCount = 0;
+                while (!window.firebaseAuth.currentUser && waitCount < 5) {
+                    await new Promise(r => setTimeout(r, 500));
+                    waitCount++;
+                }
+                if (!window.firebaseAuth.currentUser) throw new Error("Authentication timeout. Please re-login.");
+            }
+
+            const userDocPath = `users/${window.firebaseAuth.currentUser.uid}`;
+            console.log("Library Debug: Fetching User Doc for Library list:", userDocPath);
+
+            const userDoc = await window.firebaseFirestore.collection('users').doc(window.firebaseAuth.currentUser.uid).get();
+            let libraryIds = [];
+
+            if (userDoc.exists && userDoc.data().library) {
+                libraryIds = userDoc.data().library;
+                console.log("Library Debug: IDs found in Doc field:", libraryIds);
+            } else {
+                console.log("Library Debug: Doc field empty, falling back to subcollection (might error)...");
+                try {
+                    const snapshot = await window.firebaseFirestore.collection('users')
+                        .doc(window.firebaseAuth.currentUser.uid).collection('library').get();
+                    libraryIds = snapshot.docs.map(doc => doc.id);
+                    console.log("Library Debug: IDs found in subcollection:", libraryIds);
+                } catch (subErr) {
+                    console.warn("Library Debug: Subcollection access fully blocked.");
+                    if (libraryIds.length === 0) {
+                        // If both failed and we have no IDs, but doc exists, it's just empty
+                        console.log("Library Debug: Library is confirmed empty.");
+                    }
+                }
+            }
+            console.log("Library IDs found:", libraryIds);
+
+            if (libraryIds.length === 0) {
+                document.getElementById('library-container').innerHTML = `
+                    <div style="text-align:center;padding:60px 20px;color:var(--text-secondary);">
+                        <p style="font-size:4rem;margin-bottom:16px;">📚</p>
+                        <p style="font-size:1.1rem;color:var(--text-primary);margin-bottom:8px;">Your library is empty</p>
+                        <p style="font-size:0.9rem;">Bookmark books to see them here</p>
+                    </div>`;
+                return;
+            }
+
+            const libraryBooks = books.filter(b => libraryIds.includes(b.id));
+
+            // Re-use container for grid
+            const container = document.getElementById('library-container');
+            container.style.display = 'grid';
+            container.style.gridTemplateColumns = 'repeat(2, 1fr)'; // Grid layout fix
+            container.style.gap = '15px';
+            container.className = 'books-grid grid-layout'; // Add grid-layout class
+            container.innerHTML = ''; // Clear loader
+            renderBooksGrid(libraryBooks, container);
+
+        } catch (e) {
+            console.error("CRITICAL Library Error:", e);
+            console.dir(e); // Log full object for inspection
+            document.getElementById('library-container').innerHTML = `
+                <div style="text-align:center;padding:40px 20px;color:#ef4444;">
+                    <p style="font-size:3rem;margin-bottom:16px;">❌</p>
+                    <p style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">Error loading library</p>
+                    <p style="font-size:0.9rem;opacity:0.8;margin-bottom:20px;">${e.message || 'Unknown permission error'}</p>
+                    <button onclick="renderLibrary()" class="retry-btn" style="background:var(--accent-primary);color:white;border:none;padding:10px 24px;border-radius:12px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(245,158,11,0.3);">Retry</button>
+                    ${e.code ? `<p style="font-size:0.7rem;margin-top:10px;opacity:0.5;">Code: ${e.code}</p>` : ''}
+                </div>`;
+        }
     }
 
     function renderProfile() {
@@ -768,37 +1174,38 @@ function initApp() {
         const supportBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="contact-support-btn">💬 Contact Support</button>`;
 
         mainContent.innerHTML = `
-                <div class="profile-header">
-                <div class="profile-avatar-container">
-                    ${avatarHtml}
+            <div class="profile-header">
+            <div class="profile-avatar-container">
+                ${avatarHtml}
+            </div>
+            <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:4px;color:var(--text-primary);">${userProfile.name}</h2>
+            <p style="color:var(--text-secondary);margin-bottom:16px;">${userProfile.email}</p>
+            <div class="profile-bio">${userProfile.bio || 'No bio yet.'}</div>
+            
+            <div class="profile-stats">
+                <div class="stat-item">
+                    <span class="stat-value">${stats.weekMinutes}</span>
+                    <span class="stat-label">Min Read</span>
                 </div>
-                <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:4px;color:var(--text-primary);">${userProfile.name}</h2>
-                <p style="color:var(--text-secondary);margin-bottom:16px;">${userProfile.email}</p>
-                <div class="profile-bio">${userProfile.bio || 'No bio yet.'}</div>
-                
-                <div class="profile-stats">
-                    <div class="profile-stat-item">
-                        <div class="profile-stat-value">${stats.completedBooks}</div>
-                        <div class="profile-stat-label">Books</div>
-                    </div>
-                    <div class="profile-stat-item">
-                        <div class="profile-stat-value">${stats.streak}</div>
-                        <div class="profile-stat-label">Streak</div>
-                    </div>
-                    <div class="profile-stat-item">
-                        <div class="profile-stat-value">${stats.weekMinutes}</div>
-                        <div class="profile-stat-label">Minutes</div>
-                    </div>
+                <div class="stat-item">
+                    <span class="stat-value">${stats.completedBooks}</span>
+                    <span class="stat-label">Books</span>
                 </div>
-
-                <div style="display:flex;flex-direction:column;gap:12px;max-width:300px;margin:0 auto;">
-                    ${loginBtnHtml}
-                    ${editBtnHtml}
-                    ${settingsBtnHtml}
-                    ${supportBtnHtml}
+                <div class="stat-item">
+                    <span class="stat-value">${stats.streak}</span>
+                    <span class="stat-label">Streak</span>
                 </div>
             </div>
-                `;
+        </div>
+
+        <div class="profile-menu">
+            <div class="section-header"><div class="section-header-title">Account Settings</div></div>
+            ${userProfile.isGuest ? '' : editBtnHtml}
+            ${loginBtnHtml}
+            ${settingsBtnHtml}
+            ${supportBtnHtml}
+        </div>
+    `;
 
         // Attach Event Listeners
         const editBtn = document.getElementById('edit-profile-btn');
@@ -1275,6 +1682,13 @@ async function openPlayer(bookOrId) {
     }
 
     try {
+        // SUBSCRIPTION CHECK
+        if (!canAccess) {
+            console.log("Access blocked. Showing subscription modal.");
+            window.openSubscriptionModal();
+            return;
+        }
+
         // FIX: Check if file is PDF or missing, and use sample audio for testing
         let fileUrl = book.fileUrl; // Extract from book object
 
@@ -1299,11 +1713,16 @@ async function openPlayer(bookOrId) {
             narrator: book.narrator || 'Unknown Narrator',
             cover: book.coverUrl || ''
         });
-        window.location.href = `player.html?v=2.0&${params.toString()}`;
+        window.location.href = `player.html?v=3.0&${params.toString()}`;
     } catch (error) {
         console.error("Error getting file URL:", error);
         alert("Could not open audiobook. Please try again.");
     }
+}
+
+// Subscription Helper (Unified with Trial)
+async function checkSubscriptionAccess(user) {
+    return window.isTrialActive();
 }
 
 // Keep old name for compatibility
