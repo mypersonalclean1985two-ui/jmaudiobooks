@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         audioPlayer.src = audioUrl;
         audioPlayer.currentTime = startPosition; // Resume position
     } else {
-        alert('No audio file found');
+        console.error('No audio file found');
     }
 
     // Load Chapters

@@ -1698,7 +1698,12 @@ async function openPlayer(bookOrId) {
         // FIX: Check if file is PDF or missing, and use sample audio for testing
         let fileUrl = book.fileUrl; // Extract from book object
 
-        if (!fileUrl || fileUrl.endsWith('.pdf')) {
+        // ERROR HANDLING: Check for Storage SDK
+        if (!window.firebaseStorage && fileUrl && !fileUrl.startsWith('http')) {
+            console.error("CRITICAL: Firebase Storage not initialized. Using sample.");
+            fileUrl = 'audio/sample.mp3';
+        }
+        else if (!fileUrl || fileUrl.endsWith('.pdf')) {
             console.warn("PDF or missing file detected. Using sample audio for demonstration.");
             fileUrl = 'audio/sample.mp3';
         } else if (fileUrl && !fileUrl.startsWith('http') && !fileUrl.startsWith('audio/')) {
@@ -1722,7 +1727,13 @@ async function openPlayer(bookOrId) {
         window.location.href = `player.html?v=3.0&${params.toString()}`;
     } catch (error) {
         console.error("Error getting file URL:", error);
-        alert("Could not open audiobook. Please try again.");
+        // Fallback to player even with error (player will handle missing source)
+        const params = new URLSearchParams({
+            title: book.title,
+            id: book.id,
+            cover: book.coverUrl || ''
+        });
+        window.location.href = `player.html?v=3.0&${params.toString()}`;
     }
 }
 
