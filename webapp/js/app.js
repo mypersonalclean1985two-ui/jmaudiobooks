@@ -397,155 +397,171 @@ function initApp() {
             }
         });
 
-        // Toggle Password Visibility
-        togglePasswordBtn.addEventListener('click', () => {
-            const type = passwordInput.type === 'password' ? 'text' : 'password';
-            passwordInput.type = type;
-            togglePasswordBtn.textContent = type === 'password' ? '👁️' : '🙈';
-        });
-
         // Close Modal
-        document.getElementById('close-login-modal').onclick = () => {
-            loginModal.style.display = 'none';
-            errorDiv.style.display = 'none';
-            successDiv.style.display = 'none';
-        };
+        const closeBtn = document.getElementById('close-login-modal');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                loginModal.style.display = 'none';
+                errorDiv.style.display = 'none';
+                successDiv.style.display = 'none';
+            };
+        } else { console.warn("Auth: Close button not found"); }
 
         // Toggle between Login/Signup
-        switchLink.onclick = (e) => {
-            e.preventDefault();
-            isLogin = !isLogin;
-            title.textContent = isLogin ? 'Log In' : 'Sign Up';
-            nameField.style.display = isLogin ? 'none' : 'block';
-            strengthContainer.style.display = isLogin ? 'none' : 'block';
-            forgotPasswordContainer.style.display = isLogin ? 'block' : 'none';
-            btn.textContent = isLogin ? 'Log In' : 'Sign Up';
-            switchText.textContent = isLogin ? "Don't have an account? " : "Already have an account? ";
-            switchLink.textContent = isLogin ? 'Sign Up' : 'Log In';
-            errorDiv.style.display = 'none';
-            successDiv.style.display = 'none';
-        };
+        if (switchLink) {
+            switchLink.onclick = (e) => {
+                e.preventDefault();
+                isLogin = !isLogin;
+                if (title) title.textContent = isLogin ? 'Log In' : 'Sign Up';
+                if (nameField) nameField.style.display = isLogin ? 'none' : 'block';
+                if (strengthContainer) strengthContainer.style.display = isLogin ? 'none' : 'block';
+                if (forgotPasswordContainer) forgotPasswordContainer.style.display = isLogin ? 'block' : 'none';
+                if (btn) btn.textContent = isLogin ? 'Log In' : 'Sign Up';
+                if (switchText) switchText.textContent = isLogin ? "Don't have an account? " : "Already have an account? ";
+                if (switchLink) switchLink.textContent = isLogin ? 'Sign Up' : 'Log In';
+                errorDiv.style.display = 'none';
+                successDiv.style.display = 'none';
+            };
+        }
+
+        // Toggle Password Visibility
+        if (togglePasswordBtn) {
+            togglePasswordBtn.addEventListener('click', () => {
+                const type = passwordInput.type === 'password' ? 'text' : 'password';
+                passwordInput.type = type;
+                togglePasswordBtn.textContent = type === 'password' ? '👁️' : '🙈';
+            });
+        }
 
         // Forgot Password
-        forgotPasswordLink.onclick = async (e) => {
-            e.preventDefault();
-            const email = emailInput.value.trim();
+        if (forgotPasswordLink) {
+            forgotPasswordLink.onclick = async (e) => {
+                e.preventDefault();
+                const email = emailInput.value.trim();
 
-            if (!email) {
-                errorDiv.textContent = 'Please enter your email address';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            try {
-                btn.classList.add('auth-loading');
-                btn.disabled = true;
-                await window.firebaseHelpers.sendPasswordReset(email);
-                errorDiv.style.display = 'none';
-                successDiv.textContent = 'Password reset email sent! Check your inbox.';
-                successDiv.style.display = 'block';
-            } catch (err) {
-                console.error(err);
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = 'block';
-            } finally {
-                btn.classList.remove('auth-loading');
-                btn.disabled = false;
-            }
-        };
-
-        // Google Sign-In
-        // Google Sign-In
-        googleSignInBtn.onclick = async () => {
-            try {
-                googleSignInBtn.classList.add('auth-loading');
-                googleSignInBtn.disabled = true;
-                errorDiv.style.display = 'none';
-                await window.firebaseHelpers.signInWithGoogle();
-                loginModal.style.display = 'none';
-            } catch (err) {
-                console.error(err);
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = 'block';
-            } finally {
-                googleSignInBtn.classList.remove('auth-loading');
-                googleSignInBtn.disabled = false;
-            }
-        };
-
-        // Apple Sign-In
-        appleSignInBtn.onclick = async () => {
-            try {
-                appleSignInBtn.classList.add('auth-loading');
-                appleSignInBtn.disabled = true;
-                errorDiv.style.display = 'none';
-                await window.firebaseHelpers.signInWithApple();
-                loginModal.style.display = 'none';
-            } catch (err) {
-                console.error(err);
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = 'block';
-            } finally {
-                appleSignInBtn.classList.remove('auth-loading');
-                appleSignInBtn.disabled = false;
-            }
-        };
-
-        // Email/Password Auth
-        btn.onclick = async () => {
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            const name = nameInput.value.trim();
-
-            errorDiv.style.display = 'none';
-            successDiv.style.display = 'none';
-
-            // Validation
-            if (!email || !password || (!isLogin && !name)) {
-                errorDiv.textContent = 'Please fill in all fields';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            try {
-                btn.classList.add('auth-loading');
-                btn.disabled = true;
-
-                if (isLogin) {
-                    await window.firebaseHelpers.signInWithEmail(email, password);
-                } else {
-                    const strength = calculatePasswordStrength(password);
-                    if (strength.score < 2) {
-                        throw new Error('Password is too weak. Use at least 8 characters with letters and numbers.');
-                    }
-                    await window.firebaseHelpers.signUpWithEmail(email, password, name);
-                    successDiv.textContent = 'Account created! Welcome.';
-                    successDiv.style.display = 'block';
+                if (!email) {
+                    errorDiv.textContent = 'Please enter your email address';
+                    errorDiv.style.display = 'block';
+                    return;
                 }
 
-                setTimeout(() => {
-                    loginModal.style.display = 'none';
+                try {
+                    btn.classList.add('auth-loading');
+                    btn.disabled = true;
+                    await window.firebaseHelpers.sendPasswordReset(email);
                     errorDiv.style.display = 'none';
-                    successDiv.style.display = 'none';
-                }, isLogin ? 0 : 2000);
-            } catch (err) {
-                console.error(err);
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = 'block';
-            } finally {
-                btn.classList.remove('auth-loading');
-                btn.disabled = false;
-            }
-        };
+                    successDiv.textContent = 'Password reset email sent! Check your inbox.';
+                    successDiv.style.display = 'block';
+                } catch (err) {
+                    console.error(err);
+                    errorDiv.textContent = err.message;
+                    errorDiv.style.display = 'block';
+                } finally {
+                    btn.classList.remove('auth-loading');
+                    btn.disabled = false;
+                }
+            };
+        }
+
+        // Google Sign-In
+        if (googleSignInBtn) {
+            googleSignInBtn.onclick = async () => {
+                try {
+                    googleSignInBtn.classList.add('auth-loading');
+                    googleSignInBtn.disabled = true;
+                    errorDiv.style.display = 'none';
+                    await window.firebaseHelpers.signInWithGoogle();
+                    loginModal.style.display = 'none';
+                } catch (err) {
+                    console.error(err);
+                    errorDiv.textContent = err.message;
+                    errorDiv.style.display = 'block';
+                } finally {
+                    googleSignInBtn.classList.remove('auth-loading');
+                    googleSignInBtn.disabled = false;
+                }
+            };
+        }
+
+        // Apple Sign-In
+        if (appleSignInBtn) {
+            appleSignInBtn.onclick = async () => {
+                try {
+                    appleSignInBtn.classList.add('auth-loading');
+                    appleSignInBtn.disabled = true;
+                    errorDiv.style.display = 'none';
+                    await window.firebaseHelpers.signInWithApple();
+                    loginModal.style.display = 'none';
+                } catch (err) {
+                    console.error(err);
+                    errorDiv.textContent = err.message;
+                    errorDiv.style.display = 'block';
+                } finally {
+                    appleSignInBtn.classList.remove('auth-loading');
+                    appleSignInBtn.disabled = false;
+                }
+            };
+        }
+
+        // Email/Password Auth
+        if (btn) {
+            btn.onclick = async () => {
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+                const name = nameInput.value.trim();
+
+                errorDiv.style.display = 'none';
+                successDiv.style.display = 'none';
+
+                // Validation
+                if (!email || !password || (!isLogin && !name)) {
+                    errorDiv.textContent = 'Please fill in all fields';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                try {
+                    btn.classList.add('auth-loading');
+                    btn.disabled = true;
+
+                    if (isLogin) {
+                        await window.firebaseHelpers.signInWithEmail(email, password);
+                    } else {
+                        const strength = calculatePasswordStrength(password);
+                        if (strength.score < 2) {
+                            throw new Error('Password is too weak. Use at least 8 characters with letters and numbers.');
+                        }
+                        await window.firebaseHelpers.signUpWithEmail(email, password, name);
+                        successDiv.textContent = 'Account created! Welcome.';
+                        successDiv.style.display = 'block';
+                    }
+
+                    setTimeout(() => {
+                        loginModal.style.display = 'none';
+                        errorDiv.style.display = 'none';
+                        successDiv.style.display = 'none';
+                    }, isLogin ? 0 : 2000);
+                } catch (err) {
+                    console.error(err);
+                    errorDiv.textContent = err.message;
+                    errorDiv.style.display = 'block';
+                } finally {
+                    btn.classList.remove('auth-loading');
+                    btn.disabled = false;
+                }
+            };
+        }
 
         // Keyboard shortcut - Enter to submit
         [emailInput, passwordInput, nameInput].forEach(input => {
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    btn.click();
-                }
-            });
+            if (input) {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (btn) btn.click();
+                    }
+                });
+            }
         });
 
         // Click outside to close
