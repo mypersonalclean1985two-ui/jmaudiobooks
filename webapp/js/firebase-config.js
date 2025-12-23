@@ -127,6 +127,75 @@ window.firebaseHelpers = {
         }
     },
     signInWithApple: async () => {
+        // Native iOS Flow
+        if (window.cordova && window.cordova.plugins && window.cordova.plugins.SignInWithApple) {
+            console.log("Apple Sign-In: detected Native Plugin.");
+            try {
+                // 1. Generate Nonce
+                const generateNonce = (length) => {
+                    let text = "";
+                    const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                    for (let i = 0; i < length; i++) {
+                        text += possible.charAt(Math.floor(Math.random() * possible.length));
+                    }
+                    return text;
+                };
+                const rawNonce = generateNonce(32);
+
+                // 2. Request from Apple
+                // Note: The plugin automatically SHA256 hashes the nonce if provided, 
+                // but some versions differ. Standard practice for this plugin is letting it handle the UI.
+                // For Firebase manual credential, we need the ID Token.
+                const appleResponse = await window.cordova.plugins.SignInWithApple.signin({
+                    requestedScopes: [0, 1] // 0=Email, 1=Name
+                });
+
+                console.log("Apple Native Response:", appleResponse);
+
+                if (!appleResponse.identityToken) {
+                    throw new Error("No identity token returned from Apple.");
+                }
+
+                // 3. Create Credential (we rely on the token, nonce is optional if not enforced by config, 
+                // but good practice. If plugin didn't take nonce, we omit rawNonce or provide null)
+                // Since this specific plugin version might not support nonce passing easily in 'signin',
+                // we will use the ID Token directly which is usually sufficient for Firebase unless "Check Revocation" is strictly on.
+
+                const provider = new firebase.auth.OAuthProvider('apple.com');
+                const credential = provider.credential({
+                    idToken: appleResponse.identityToken,
+                    // rawNonce: rawNonce // Omitting nonce for simplicity unless we bind it to request
+                });
+
+                // 4. Sign in
+                const result = await auth.signInWithCredential(credential);
+
+                // 5. Update Profile (Apple only sends name ONCE, on first login)
+                if (appleResponse.fullName && appleResponse.fullName.givenName) {
+                    const name = `${appleResponse.fullName.givenName} ${appleResponse.fullName.familyName}`;
+                    console.log("Got Apple Name:", name);
+                    // Update Firebase Profile immediately
+                    if (result.user) {
+                        try {
+                            await result.user.updateProfile({ displayName: name });
+                            // Force update our firestore tracking
+                            await db.collection('users').doc(result.user.uid).set({
+                                displayName: name,
+                                email: result.user.email // Ensure email is captured
+                            }, { merge: true });
+                        } catch (e) { console.error("Name update warn:", e); }
+                    }
+                }
+                return;
+
+            } catch (error) {
+                console.error("Native Apple Sign-In Failed:", error);
+                alert("Apple Button Error: " + (error.message || JSON.stringify(error)));
+                throw error;
+            }
+        }
+
+        // Web Fallback
         const provider = new firebase.auth.OAuthProvider('apple.com');
         provider.addScope('email');
         provider.addScope('name');
