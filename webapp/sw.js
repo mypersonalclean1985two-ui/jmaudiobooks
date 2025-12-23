@@ -25,6 +25,18 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+
+    // CRITICAL PERF: Bypass Service Worker for Audio & Storage
+    // Large binary streams should be handled natively by the browser's engine.
+    if (
+        url.pathname.endsWith('.mp3') ||
+        url.pathname.endsWith('.m4a') ||
+        url.hostname.includes('firebasestorage')
+    ) {
+        return; // Let the browser handle it directly
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then((response) => response || fetch(event.request))

@@ -37,14 +37,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     const coverUrl = urlParams.get('cover');
     const author = urlParams.get('author');
 
+    // Resume Logic: MOVE TO TOP
+    const savedReading = localStorage.getItem('currentlyReading');
+    let startPosition = 0;
+    if (savedReading) {
+        const savedData = JSON.parse(savedReading);
+        if (savedData.bookId === bookId) {
+            startPosition = savedData.currentTime || 0;
+        }
+    }
+
     // 2. IMMEDIATE ASYNC PREP
     if (audioUrl) {
+        // OPTIMIZE: Faster CORS handling for streaming
+        audioPlayer.crossOrigin = "anonymous";
+
         if (!audioUrl.startsWith('http') && !audioUrl.startsWith('audio/')) {
             // It's a storage path! Fetch in background while UI shows.
             const loadingText = document.getElementById('loading-text');
             if (loadingText) {
                 loadingText.style.opacity = '1';
-                loadingText.innerHTML = `<span class="buffer-spinner"></span> Resolving Link...`;
+                loadingText.innerHTML = `<span class="buffer-spinner"></span> Resolving...`;
             }
 
             window.firebaseStorage.ref(audioUrl).getDownloadURL().then(url => {
@@ -74,15 +87,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('bg-blur').style.backgroundImage = `url('${coverUrl}')`;
     }
 
-    // Resume Logic
-    const savedReading = localStorage.getItem('currentlyReading');
-    let startPosition = 0;
-    if (savedReading) {
-        const savedData = JSON.parse(savedReading);
-        if (savedData.bookId === bookId) {
-            startPosition = savedData.currentTime || 0;
-        }
-    }
 
     // 3. BACKGROUND TASKS (DO NOT BLOCK PLAYBACK)
     setupControls();
