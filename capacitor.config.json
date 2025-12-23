@@ -14,5 +14,15 @@
       "*.apple.com",
       "appleid.apple.com"
     ]
+  },
+  "plugins": {
+    "GoogleAuth": {
+      "scopes": [
+        "profile",
+        "email"
+      ],
+      "serverClientId": "429711777820-bd940d990494.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
+    }
   }
 }
