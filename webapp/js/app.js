@@ -615,7 +615,7 @@ function initApp() {
                 window.globalUserProfile.subscriptionStatus = 'active';
                 localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
 
-                alert("Subscription Active! Thank you.");
+                console.log("Subscription Active! Thank you.");
                 window.closeModal('subscription-modal');
                 window.location.reload();
             }
@@ -686,7 +686,7 @@ function initApp() {
             store.order(PRODUCT_ID_MONTHLY);
         } catch (e) {
             console.error("IAP Order Error:", e);
-            alert("Could not start purchase: " + e.message);
+            subBtn.textContent = "Purchase Error";
             subBtn.textContent = originalText;
             subBtn.disabled = false;
         }

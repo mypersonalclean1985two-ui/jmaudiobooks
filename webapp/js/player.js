@@ -124,7 +124,7 @@ function setupControls() {
 
         const active = await isTrialActive();
         if (!active) {
-            alert("Your 14-day free trial has expired. Redirecting to subscription page...");
+            console.warn("Trial expired. Redirecting...");
             window.location.href = 'index.html';
             return;
         }
