@@ -127,12 +127,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.firebaseFirestore.collection('books').doc(bookId).get().then(doc => {
                 if (doc.exists) {
                     currentBook = doc.data();
-                    if (currentBook.chapters && currentBook.chapters.length > 0) {
+                    console.log("Player: Fetched book data", currentBook);
+
+                    if (currentBook.chapters && Array.isArray(currentBook.chapters) && currentBook.chapters.length > 0) {
+                        console.log(`Player: Found ${currentBook.chapters.length} chapters.`);
                         chapters = currentBook.chapters;
                         renderList();
+                    } else {
+                        console.warn("Player: No chapters array found in book data. Using default/fallback.");
+                        // Optional: Could try to generate chapters from duration if needed, 
+                        // but for now we stick to the default "Audiobook" item to avoid breaking.
                     }
+                } else {
+                    console.error("Player: Book document does not exist!", bookId);
                 }
-            }),
+            }).catch(err => console.error("Player: Error fetching book details:", err)),
             window.currentUser ? loadProgress(bookId) : Promise.resolve(),
             window.currentUser ? loadBookmarks(bookId) : Promise.resolve(),
             isTrialActive(true) // Refresh cache in background
@@ -213,10 +222,17 @@ function setupControls() {
     function handleSwipe(startX, startY, endX, endY) {
         const diffX = endX - startX;
         const diffY = endY - startY;
-        if (Math.abs(diffX) > 100 && Math.abs(diffY) < 50) {
-            if (diffX > 0) history.back();
-        } else if (Math.abs(diffY) > 100 && Math.abs(diffX) < 50) {
-            if (diffY > 0) window.location.href = 'index.html';
+        // Relaxed thresholds: >60px swipe, <100px off-axis tolerance
+        if (Math.abs(diffX) > 60 && Math.abs(diffY) < 100) {
+            if (diffX > 0) {
+                console.log("Swipe Back Detected");
+                history.back();
+            }
+        } else if (Math.abs(diffY) > 60 && Math.abs(diffX) < 100) {
+            if (diffY > 0) {
+                console.log("Swipe Down Detected");
+                window.location.href = 'index.html';
+            }
         }
     }
 

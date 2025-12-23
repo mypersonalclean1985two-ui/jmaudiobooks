@@ -13,6 +13,9 @@
     <div class="player-background" id="bg-blur"></div>
 
     <div class="player-container">
+        <!-- Loading Overlay (Global) -->
+        <div id="loading-text"></div>
+
         <!-- Header -->
         <div class="player-header">
             <button class="back-btn" onclick="window.history.back()">
@@ -48,7 +51,7 @@
             </div>
             <div class="time-display">
                 <span id="current-time">0:00</span>
-                <span id="loading-text"></span>
+                <!-- loading-text moved to root -->
                 <span id="total-time">0:00</span>
             </div>
         </div>
