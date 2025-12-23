@@ -388,14 +388,18 @@ function initApp() {
         }
 
         // Password Strength Indicator
-        passwordInput.addEventListener('input', () => {
-            if (!isLogin) {
-                const result = calculatePasswordStrength(passwordInput.value);
-                strengthFill.className = `password-strength-fill ${result.strength}`;
-                strengthText.className = `password-strength-text ${result.strength}`;
-                strengthText.textContent = result.text;
-            }
-        });
+        if (passwordInput) {
+            passwordInput.addEventListener('input', () => {
+                if (!isLogin) {
+                    const result = calculatePasswordStrength(passwordInput.value);
+                    if (strengthFill && strengthText) {
+                        strengthFill.className = `password-strength-fill ${result.strength}`;
+                        strengthText.className = `password-strength-text ${result.strength}`;
+                        strengthText.textContent = result.text;
+                    }
+                }
+            });
+        }
 
         // Close Modal
         const closeBtn = document.getElementById('close-login-modal');
