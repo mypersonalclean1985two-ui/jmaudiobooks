@@ -912,6 +912,13 @@ function initApp() {
         return book.coverUrl || 'placeholder.svg';
     }
 
+    // Helper: Extract valid categories from books
+    function getAvailableCategories(bookList) {
+        if (!bookList || bookList.length === 0) return [];
+        const raw = bookList.map(b => b.category).filter(c => c && typeof c === 'string' && c.trim() !== '');
+        return [...new Set(raw.map(c => c.trim()))].sort();
+    }
+
     function renderHome() {
         // Restore standard header if we came back from a sub-page
         const topBar = document.querySelector('.top-bar');
@@ -924,7 +931,7 @@ function initApp() {
             if (titleEl) titleEl.style.display = 'block';
         }
 
-        const uniqueCategories = [...new Set(books.map(b => b.category).filter(Boolean))].sort();
+        const uniqueCategories = getAvailableCategories(books);
         const tabsHtml = `
             <div class="tab active" data-category="all">All Books</div>
             ${uniqueCategories.map(cat => `<div class="tab" data-category="${cat}">${cat}</div>`).join('')}
@@ -1024,12 +1031,9 @@ function initApp() {
         }
 
         // Dynamic Categories from available books
-        const categories = [...new Set(books.map(b => b.category).filter(Boolean))].sort();
-        // ... rest of the function (I'll use a more precise replacement)
+        const categories = getAvailableCategories(books);
 
-        let discoveryHtml = `
-            <div class="discovery-container">
-        `;
+        let discoveryHtml = `<div class="discovery-container">`;
 
         // Add a "Trending" row
         discoveryHtml += `
@@ -1037,24 +1041,26 @@ function initApp() {
             <div class="books-grid" id="trending-grid"></div>
         `;
 
-        // Add a row for each category dynamically
-        categories.forEach(cat => {
-            const safeId = cat.replace(/\s+/g, '-').toLowerCase();
+        // Generate Containers
+        categories.forEach((cat, index) => {
+            // Create a simple, safe ID based on index to avoid character issues
+            const gridId = `grid-category-${index}`;
             discoveryHtml += `
                 <div class="section-header"><div class="section-header-title">${cat}</div></div>
-                <div class="books-grid" id="grid-${safeId}"></div>
+                <div class="books-grid" id="${gridId}"></div>
             `;
         });
 
+        discoveryHtml += `</div>`; // Close container
         mainContent.innerHTML = discoveryHtml;
 
-        // Render data
+        // Render Data
         renderBooksGrid(books.slice(0, 10), document.getElementById('trending-grid'));
-        categories.forEach(cat => {
-            if (!cat) return;
-            const safeId = cat.replace(/\s+/g, '-').toLowerCase();
-            const filtered = books.filter(b => b.category === cat);
-            const grid = document.getElementById(`grid-${safeId}`);
+
+        categories.forEach((cat, index) => {
+            const gridId = `grid-category-${index}`;
+            const filtered = books.filter(b => b.category && b.category.trim() === cat);
+            const grid = document.getElementById(gridId);
             if (grid) renderBooksGrid(filtered, grid);
         });
 
