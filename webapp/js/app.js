@@ -938,7 +938,7 @@ function initApp() {
                 <div style="background:var(--bg-card);border-radius:24px;padding:32px;text-align:center;margin:20px 0;border:1px solid var(--border-color);box-shadow:0 12px 40px rgba(0,0,0,0.3);">
                     <div style="font-size:3.5rem;margin-bottom:16px;">⌛</div>
                     <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:8px;color:var(--text-primary);">Trial Expired</h2>
-                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$3.50/month</strong> to continue listening to your library.</p>
+                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$3.99/month</strong> to continue listening to your library.</p>
                     <button class="btn-primary" style="width:100%;padding:14px;border-radius:16px;font-weight:700;">Subscribe Now</button>
                     <p style="margin-top:16px;font-size:0.8rem;color:var(--text-secondary);opacity:0.6;">Cancel anytime • Ad-free experience</p>
                 </div>
@@ -1013,7 +1013,7 @@ function initApp() {
                 <div style="background:var(--bg-card);border-radius:24px;padding:32px;text-align:center;margin:20px 0;border:1px solid var(--border-color);box-shadow:0 12px 40px rgba(0,0,0,0.3);">
                     <div style="font-size:3.5rem;margin-bottom:16px;">⌛</div>
                     <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:8px;color:var(--text-primary);">Trial Expired</h2>
-                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$3.50/month</strong> to continue listening to your library.</p>
+                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$3.99/month</strong> to continue listening to your library.</p>
                     <button class="btn-primary" style="width:100%;padding:14px;border-radius:16px;font-weight:700;" onclick="window.openSubscriptionModal()">Subscribe Now</button>
                     <p style="margin-top:16px;font-size:0.8rem;color:var(--text-secondary);opacity:0.6;">Cancel anytime • Ad-free experience</p>
                 </div>
