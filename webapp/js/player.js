@@ -14,6 +14,17 @@ let stats = { streak: 0, weekMinutes: 0, completedBooks: 0, lastPlayed: null };
 const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
 const pauseSvg = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
 
+// CORS Proxy Helper - Bypass archive.org CORS restrictions
+function getCorsProxyUrl(url) {
+    // Only proxy archive.org URLs
+    if (!url || !url.includes('archive.org')) {
+        return url;
+    }
+
+    // Use AllOrigins proxy (reliable and free)
+    return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+}
+
 // Load preliminary stats
 const savedStats = localStorage.getItem('stats');
 if (savedStats) stats = JSON.parse(savedStats);
@@ -27,11 +38,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. IMMEDIATE PARAMS CHECK (FASTEST)
     const urlParams = new URLSearchParams(window.location.search);
-    const audioUrl = urlParams.get('file');
+    const rawAudioUrl = urlParams.get('file');
+    const audioUrl = getCorsProxyUrl(rawAudioUrl); // Apply CORS proxy
     const title = urlParams.get('title');
     const bookId = urlParams.get('id');
-    const coverUrl = urlParams.get('cover');
+    const rawCoverUrl = urlParams.get('cover');
+    const coverUrl = getCorsProxyUrl(rawCoverUrl); // Apply CORS proxy
     const author = urlParams.get('author');
+
+    console.log('Audio URL (proxied):', audioUrl);
 
     // Resume Logic
     const savedReading = localStorage.getItem('currentlyReading');
