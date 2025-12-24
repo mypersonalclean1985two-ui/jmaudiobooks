@@ -218,6 +218,26 @@ def import_librivox_book(book_data, category="Classic"):
         if not mp3_files:
              raise Exception("No MP3 files found in this item")
 
+        # DEDUPLICATE: Group by base filename (without quality suffix)
+        # LibriVox often has multiple formats: VBR, 128Kbps, 64Kbps for same chapter
+        seen_chapters = {}
+        for f in mp3_files:
+            f_name = f.get('name')
+            # Extract base name (remove quality suffixes)
+            base_name = f_name.replace('_64kb', '').replace('_128kb', '').replace('_vbr', '')
+            
+            # Only keep first occurrence or upgrade to VBR if found
+            if base_name not in seen_chapters:
+                seen_chapters[base_name] = f
+            elif f.get('format') == 'VBR MP3':  # Prefer VBR over others
+                seen_chapters[base_name] = f
+        
+        # Use deduplicated list
+        mp3_files = list(seen_chapters.values())
+        mp3_files.sort(key=lambda x: x.get('name'))  # Re-sort after deduplication
+        
+        print(f"Import: Found {len(mp3_files)} unique chapters (after deduplication)")
+
         # Construct URLs and Chapters
         chapters = []
         for f in mp3_files:

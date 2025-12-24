@@ -1063,6 +1063,10 @@ function initApp() {
     }
 
     async function renderLibrary() {
+        console.log("📚 renderLibrary: Starting...");
+        console.log("📚 Current user:", window.currentUser?.uid);
+        console.log("📚 User profile library:", userProfile.library);
+
         mainContent.innerHTML = `
             <div class="section-header"><div class="section-header-title">My Library</div></div>
             <div id="library-container" style="min-height: 200px; display: flex; justify-content: center; align-items: center;">
@@ -1130,6 +1134,9 @@ function initApp() {
             }
 
             const libraryBooks = books.filter(b => libraryIds.includes(b.id));
+            console.log("📚 Library IDs found:", libraryIds);
+            console.log("📚 Total books available:", books.length);
+            console.log("📚 Filtered library books:", libraryBooks.length);
 
             // Re-use container for grid
             const container = document.getElementById('library-container');
@@ -1584,6 +1591,8 @@ function initApp() {
 
                 console.log("LibraryBtn: Clicked for book", book.id);
                 libraryBtn.textContent = 'Saving...';
+                libraryBtn.disabled = true;
+
                 try {
                     if (!userProfile.library) {
                         console.log("LibraryBtn: Initializing userProfile.library array");
@@ -1591,15 +1600,33 @@ function initApp() {
                     }
                     if (!userProfile.library.includes(book.id)) {
                         userProfile.library.push(book.id);
+
+                        // Save to Firestore with error handling
+                        console.log("LibraryBtn: Saving to Firestore...");
                         await window.firebaseHelpers.updateUserProfile(window.currentUser.uid, {
                             library: userProfile.library
                         });
-                        console.log("Library: Book added to user's library in Firestore:", book.id);
-                        libraryBtn.textContent = 'In Library';
-                        libraryBtn.disabled = true;
-                        // Optional: Refresh library view if active
-                        if (document.querySelector('.nav-btn.active')?.getAttribute('data-target') === 'library') {
-                            renderLibrary();
+
+                        // Verify it was saved
+                        console.log("LibraryBtn: Verifying save...");
+                        const verifyDoc = await window.firebaseFirestore
+                            .collection('users')
+                            .doc(window.currentUser.uid)
+                            .get();
+
+                        if (verifyDoc.exists && verifyDoc.data().library?.includes(book.id)) {
+                            console.log("✅ Library: Book successfully saved to Firestore:", book.id);
+                            libraryBtn.textContent = 'In Library ✓';
+                            libraryBtn.disabled = true;
+
+                            // Force refresh library view if active
+                            const activeTab = document.querySelector('.nav-btn.active')?.getAttribute('data-target');
+                            if (activeTab === 'library') {
+                                console.log("Library: Refreshing library view...");
+                                await renderLibrary();
+                            }
+                        } else {
+                            throw new Error("Verification failed - book not found in Firestore after save");
                         }
                     } else {
                         console.log("Library: Book already in library, no action needed.");
@@ -1607,8 +1634,10 @@ function initApp() {
                         libraryBtn.disabled = true;
                     }
                 } catch (err) {
-                    console.error("Error adding to library:", err);
-                    libraryBtn.textContent = 'Error';
+                    console.error("❌ Error adding to library:", err);
+                    alert(`Failed to save book: ${err.message}`);
+                    libraryBtn.textContent = 'Add to Library';
+                    libraryBtn.disabled = false;
                 }
             };
         }
