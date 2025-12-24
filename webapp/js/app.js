@@ -1199,7 +1199,7 @@ function initApp() {
             : (userProfile.isGuest ? '' : `<div class="membership-badge trial"><span>🎁</span> Free Trial</div>`);
 
         const upgradeBtnHtml = showUpgradeBtn
-            ? `<button class="btn-primary upgrade-btn" style="width:100%; margin-top: 12px; background: linear-gradient(135.47deg, #F59E0B 0%, #D97706 100%);" id="upgrade-membership-btn">⭐ Upgrade to Premium</button>`
+            ? `<button class="btn-primary upgrade-btn" style="width:100%; margin-top: 12px; margin-bottom: 16px; background: linear-gradient(135.47deg, #F59E0B 0%, #D97706 100%);" id="upgrade-membership-btn">⭐ Upgrade to Premium</button>`
             : '';
 
         mainContent.innerHTML = `
