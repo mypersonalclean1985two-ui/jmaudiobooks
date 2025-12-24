@@ -562,14 +562,32 @@ function initApp() {
     let monthlyPrice = '$3.99'; // Fallback only
     let yearlyPrice = '$25.99'; // Fallback only
 
+    // Track product loading state
+    let productsLoaded = false;
+    let loadedProductIds = [];
+    let productsLoadedCount = 0;
+
     // IAP: Initialize Store
     document.addEventListener('deviceready', function () {
+        console.log('[IAP DEBUG] ========================================');
+        console.log('[IAP DEBUG] 🆔 Bundle ID: com.jmaudiobooks.jmaudiobooks');
+        console.log('[IAP DEBUG] 🆔 Platform:', window.Capacitor?.getPlatform() || 'unknown');
+        console.log('[IAP DEBUG] ========================================');
+
         if (!window.store) {
             console.log('Store not available');
             return;
         }
 
         // 1. Register BOTH Products
+        console.log('[IAP DEBUG] ========================================');
+        console.log('[IAP DEBUG] 📤 REQUESTING PRODUCTS FROM STOREKIT');
+        console.log('[IAP DEBUG] ========================================');
+        console.log('[IAP DEBUG] Product 1 ID:', PRODUCT_ID_MONTHLY);
+        console.log('[IAP DEBUG] Product 2 ID:', PRODUCT_ID_YEARLY);
+        console.log('[IAP DEBUG] Total products requested: 2');
+        console.log('[IAP DEBUG] ========================================');
+
         store.register([
             {
                 id: PRODUCT_ID_MONTHLY,
@@ -581,23 +599,83 @@ function initApp() {
             }
         ]);
 
+        console.log('[IAP DEBUG] Products registered successfully');
+        console.log('[IAP DEBUG] Calling store.refresh() to fetch from StoreKit...');
+
+        // Log initial product count
+        setTimeout(() => {
+            const allProducts = window.store.products;
+            const productCount = allProducts ? Object.keys(allProducts).length : 0;
+            console.log('[IAP DEBUG] ========================================');
+            console.log('[IAP DEBUG] 📥 PRODUCTS RETURNED FROM STOREKIT');
+            console.log('[IAP DEBUG] ========================================');
+            console.log('[IAP DEBUG] 📊 Products REQUESTED: 2');
+            console.log('[IAP DEBUG] 📊 Products RETURNED:', productCount);
+            console.log('[IAP DEBUG] 📊 Product IDs returned:', allProducts ? Object.keys(allProducts) : []);
+            console.log('[IAP DEBUG] 📊 Full products object:', allProducts);
+            console.log('[IAP DEBUG] ========================================');
+
+            if (productCount === 0) {
+                console.error('[IAP DEBUG] ❌❌❌ CRITICAL ERROR ❌❌❌');
+                console.error('[IAP DEBUG] ❌ NO PRODUCTS LOADED FROM STOREKIT!');
+                console.error('[IAP DEBUG] ❌ StoreKit returned 0 products');
+                console.error('[IAP DEBUG] ❌ Purchase will NOT work');
+                console.error('[IAP DEBUG] ❌ Possible causes:');
+                console.error('[IAP DEBUG] ❌   1. Products not approved in App Store Connect');
+                console.error('[IAP DEBUG] ❌   2. Bundle ID mismatch (expected: com.jmaudiobooks.jmaudiobooks)');
+                console.error('[IAP DEBUG] ❌   3. Product IDs don\'t match App Store Connect');
+                console.error('[IAP DEBUG] ❌   4. Build uploaded before products were configured');
+                console.error('[IAP DEBUG] ❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌');
+            } else if (productCount < 2) {
+                console.warn('[IAP DEBUG] ⚠️ WARNING: Only', productCount, 'product(s) loaded');
+                console.warn('[IAP DEBUG] ⚠️ Expected 2 products (monthly + yearly)');
+                console.warn('[IAP DEBUG] ⚠️ Check App Store Connect configuration');
+            } else {
+                console.log('[IAP DEBUG] ✅ SUCCESS: All', productCount, 'products loaded correctly!');
+            }
+        }, 3000);
+
         // 2. Setup Event Listeners
         // Update prices when products load from StoreKit
         store.when('product').updated(function (product) {
-            console.log('IAP Product Updated:', product);
+            console.log('[IAP DEBUG] Product Updated from StoreKit:');
+            console.log('[IAP DEBUG] - Product ID:', product.id);
+            console.log('[IAP DEBUG] - Price:', product.price);
+            console.log('[IAP DEBUG] - Title:', product.title);
+            console.log('[IAP DEBUG] - Description:', product.description);
+            console.log('[IAP DEBUG] - Full product object:', product);
+
+            // Track loaded products
+            if (!loadedProductIds.includes(product.id)) {
+                loadedProductIds.push(product.id);
+                productsLoadedCount++;
+                console.log('[IAP DEBUG] 📦 Product loaded count:', productsLoadedCount, '/', 2);
+            }
 
             // Update monthly price from StoreKit
             if (product.id === PRODUCT_ID_MONTHLY && product.price) {
                 monthlyPrice = product.price;
-                console.log('Monthly price from StoreKit:', monthlyPrice);
+                console.log('[IAP DEBUG] ✅ Monthly product loaded - Price:', monthlyPrice);
                 updateSubscriptionPrices();
             }
 
             // Update yearly price from StoreKit
             if (product.id === PRODUCT_ID_YEARLY && product.price) {
                 yearlyPrice = product.price;
-                console.log('Yearly price from StoreKit:', yearlyPrice);
+                console.log('[IAP DEBUG] ✅ Yearly product loaded - Price:', yearlyPrice);
                 updateSubscriptionPrices();
+            }
+
+            // Check if both products are loaded
+            if (loadedProductIds.includes(PRODUCT_ID_MONTHLY) && loadedProductIds.includes(PRODUCT_ID_YEARLY)) {
+                productsLoaded = true;
+                console.log('[IAP DEBUG] 🎉 ALL PRODUCTS LOADED - Purchase is now enabled');
+                enableSubscribeButton();
+            }
+
+            // Check if product ID doesn't match expected IDs
+            if (product.id !== PRODUCT_ID_MONTHLY && product.id !== PRODUCT_ID_YEARLY) {
+                console.warn('[IAP DEBUG] ⚠️ Unknown product ID received:', product.id);
             }
         });
 
@@ -676,18 +754,25 @@ function initApp() {
 
         // Handle Errors
         store.error(function (e) {
-            console.error("IAP Error Global:", e);
+            console.error('[IAP DEBUG] ❌❌❌ STORE ERROR OCCURRED ❌❌❌');
+            console.error('[IAP DEBUG] Error object:', e);
+            console.error('[IAP DEBUG] Error code:', e.code);
+            console.error('[IAP DEBUG] Error message:', e.message);
+            console.error('[IAP DEBUG] Product ID:', e.productId);
+
             const subBtn = document.getElementById('subscribe-btn');
             if (subBtn) {
                 subBtn.textContent = "Purchase Error";
                 subBtn.disabled = false;
                 setTimeout(() => subBtn.textContent = "Start Free Trial", 3000);
             }
-            console.error("Store Error: " + e.message);
+            console.error('[IAP DEBUG] Store Error Summary: ' + e.message);
         });
 
         // 3. Refresh Store to load products and check entitlements
+        console.log('[IAP DEBUG] Calling store.refresh() to load products from App Store...');
         store.refresh();
+        console.log('[IAP DEBUG] store.refresh() called - waiting for products to load...');
     });
 
     // Function to unlock premium features
@@ -703,6 +788,29 @@ function initApp() {
                 plan: plan,
                 restoredAt: new Date()
             });
+        }
+    }
+
+    // Function to enable subscribe button when products are loaded
+    function enableSubscribeButton() {
+        const subBtn = document.getElementById('subscribe-btn');
+        if (subBtn) {
+            subBtn.disabled = false;
+            subBtn.style.opacity = '1';
+            subBtn.style.cursor = 'pointer';
+            console.log('[IAP DEBUG] ✅ Subscribe button enabled');
+        }
+    }
+
+    // Function to disable subscribe button when products are not loaded
+    function disableSubscribeButton(reason) {
+        const subBtn = document.getElementById('subscribe-btn');
+        if (subBtn) {
+            subBtn.disabled = true;
+            subBtn.style.opacity = '0.5';
+            subBtn.style.cursor = 'not-allowed';
+            subBtn.title = reason;
+            console.log('[IAP DEBUG] ⚠️ Subscribe button disabled:', reason);
         }
     }
 
@@ -725,12 +833,48 @@ function initApp() {
 
     // Real IAP Handler with Plan Selection
     window.handleSubscriptionWithPlan = async function (planType) {
+        console.log('[IAP DEBUG] ========================================');
+        console.log('[IAP DEBUG] handleSubscriptionWithPlan called');
+        console.log('[IAP DEBUG] - Plan Type:', planType);
+        console.log('[IAP DEBUG] - Expected values: "monthly" or "yearly" or "annual"');
+
         const subBtn = document.getElementById('subscribe-btn');
-        if (!subBtn) return;
+        if (!subBtn) {
+            console.error('[IAP DEBUG] ❌ Subscribe button not found!');
+            return;
+        }
 
         // Determine Product ID based on selected plan
-        const productId = planType === 'monthly' ? PRODUCT_ID_MONTHLY : PRODUCT_ID_YEARLY;
-        console.log(`Purchasing ${planType} plan with Product ID: ${productId}`);
+        // Handle both 'yearly' and 'annual' for compatibility
+        let productId;
+        if (planType === 'monthly') {
+            productId = PRODUCT_ID_MONTHLY;
+        } else if (planType === 'yearly' || planType === 'annual') {
+            productId = PRODUCT_ID_YEARLY;
+        } else {
+            console.error('[IAP DEBUG] ❌ Unknown plan type:', planType);
+            productId = PRODUCT_ID_YEARLY; // Default to yearly
+        }
+
+        console.log('[IAP DEBUG] - Mapped Product ID:', productId);
+        console.log('[IAP DEBUG] - Monthly ID constant:', PRODUCT_ID_MONTHLY);
+        console.log('[IAP DEBUG] - Yearly ID constant:', PRODUCT_ID_YEARLY);
+
+        // CHECK 1: Verify products are loaded
+        console.log('[IAP DEBUG] 🔍 Products loaded?', productsLoaded);
+        console.log('[IAP DEBUG] 🔍 Loaded product IDs:', loadedProductIds);
+        console.log('[IAP DEBUG] 🔍 Products loaded count:', productsLoadedCount, '/ 2');
+
+        if (!productsLoaded) {
+            console.error('[IAP DEBUG] ❌ PRODUCTS NOT LOADED YET!');
+            console.error('[IAP DEBUG] ❌ Cannot start purchase - StoreKit products not fetched');
+            console.error('[IAP DEBUG] ❌ Wait for products to load or check App Store Connect');
+            subBtn.textContent = 'Products Loading...';
+            setTimeout(() => {
+                subBtn.textContent = 'Start Free Trial';
+            }, 2000);
+            return;
+        }
 
         // Check if plugin is ready
         if (!window.store) {
@@ -770,21 +914,59 @@ function initApp() {
         }
 
         // NATIVE IAP FLOW
+        console.log('[IAP DEBUG] Starting native IAP flow...');
+        console.log('[IAP DEBUG] 🔍 Environment check:');
+        console.log('[IAP DEBUG] - Is TestFlight?', window.location.href.includes('testflight') || navigator.userAgent.includes('TestFlight'));
+        console.log('[IAP DEBUG] - Is Sandbox?', window.store.sandbox);
+        console.log('[IAP DEBUG] - User Agent:', navigator.userAgent);
+
         const originalText = subBtn.textContent;
         subBtn.textContent = "Contacting App Store...";
         subBtn.disabled = true;
 
         try {
-            console.log(`Ordering product: ${productId}`);
+            // CHECK 2: Log all products in store
+            const allProducts = window.store.products;
+            const productCount = allProducts ? Object.keys(allProducts).length : 0;
+            console.log('[IAP DEBUG] 📊 Store has', productCount, 'products');
+            console.log('[IAP DEBUG] 📊 Product IDs in store:', allProducts ? Object.keys(allProducts) : []);
+
+            if (productCount === 0) {
+                console.error('[IAP DEBUG] ❌ CRITICAL: Store has 0 products!');
+                console.error('[IAP DEBUG] ❌ Cannot purchase - no products available');
+                throw new Error('No products available in store');
+            }
+
+            console.log('[IAP DEBUG] Calling store.order() with productId:', productId);
+            console.log('[IAP DEBUG] Store object:', window.store);
+            console.log('[IAP DEBUG] Store products:', window.store.products);
+
+            // Check if product exists in store
+            const product = window.store.get(productId);
+            if (product) {
+                console.log('[IAP DEBUG] ✅ Product found in store:', product);
+                console.log('[IAP DEBUG] - Product state:', product.state);
+                console.log('[IAP DEBUG] - Product canPurchase:', product.canPurchase);
+            } else {
+                console.error('[IAP DEBUG] ❌ Product NOT found in store!');
+                console.error('[IAP DEBUG] Available products:', Object.keys(window.store.products));
+            }
+
+            console.log('[IAP DEBUG] 🚀 Executing store.order()...');
             store.order(productId);
+            console.log('[IAP DEBUG] ✅ store.order() called successfully (waiting for Apple response)');
         } catch (error) {
-            console.error("Order failed:", error);
+            console.error('[IAP DEBUG] ❌ Order failed with exception:', error);
+            console.error('[IAP DEBUG] Error message:', error.message);
+            console.error('[IAP DEBUG] Error stack:', error.stack);
             subBtn.textContent = "Purchase Error";
             setTimeout(() => {
                 subBtn.textContent = originalText;
                 subBtn.disabled = false;
             }, 2000);
         }
+
+        console.log('[IAP DEBUG] ========================================');
     };
 
     // Real IAP Handler (legacy - keeping for compatibility)

@@ -1,0 +1,51 @@
+--- Book Cover URLs (First 10 Books) ---
+Title: The City at World's End
+  coverUrl: https://archive.org/services/img/city_worlds_end_1203_librivox
+  coverImage: N/A
+  All keys: ['createdAt', 'duration', 'description', 'author', 'id', 'category', 'chapters', 'coverUrl', 'price', 'narrator', 'fileUrl', 'title']
+--------------------------------------------------
+Title: The Young Diana
+  coverUrl: https://archive.org/services/img/young_diana_1802_librivox
+  coverImage: N/A
+  All keys: ['createdAt', 'duration', 'description', 'author', 'id', 'category', 'chapters', 'coverUrl', 'narrator', 'price', 'fileUrl', 'title']
+--------------------------------------------------
+Title: The Masquerader
+  coverUrl: https://archive.org/services/img/masquerader_tw_librivox
+  coverImage: N/A
+  All keys: ['createdAt', 'duration', 'description', 'id', 'author', 'category', 'chapters', 'coverUrl', 'narrator', 'price', 'fileUrl', 'title']
+--------------------------------------------------
+Title: A Poor Wise Man
+  coverUrl: https://archive.org/services/img/poor_wise_man_1904_librivox
+  coverImage: N/A
+  All keys: ['createdAt', 'duration', 'description', 'author', 'id', 'category', 'chapters', 'coverUrl', 'price', 'narrator', 'fileUrl', 'title']
+--------------------------------------------------
+Title: That Affair Next Door
+  coverUrl: https://archive.org/services/img/affairnextdoor_2312_librivox
+  coverImage: N/A
+  All keys: ['createdAt', 'duration', 'description', 'author', 'id', 'category', 'chapters', 'coverUrl', 'price', 'narrator', 'fileUrl', 'title']
+--------------------------------------------------
+Title: The Invisible Man
+  coverUrl: https://archive.org/services/img/invisible_man_librivox
+  coverImage: N/A
+  All keys: ['createdAt', 'duration', 'description', 'id', 'author', 'category', 'chapters', 'coverUrl', 'narrator', 'price', 'fileUrl', 'title']
+--------------------------------------------------
+Title: Great Expectations
+  coverUrl: https://archive.org/services/img/great_expectations_mfs_0812_librivox
+  coverImage: N/A
+  All keys: ['createdAt', 'duration', 'description', 'author', 'id', 'category', 'chapters', 'coverUrl', 'price', 'narrator', 'fileUrl', 'title']
+--------------------------------------------------
+Title: Tales of Terror and Mystery
+  coverUrl: https://archive.org/services/img/terror_mystery_0707_librivox
+  coverImage: N/A
+  All keys: ['createdAt', 'duration', 'description', 'id', 'author', 'category', 'chapters', 'coverUrl', 'narrator', 'price', 'fileUrl', 'title']
+--------------------------------------------------
+Title: Romeo and Juliet
+  coverUrl: https://archive.org/services/img/romeoandjuliet_ss_0901_librivox
+  coverImage: N/A
+  All keys: ['createdAt', 'duration', 'description', 'id', 'author', 'category', 'chapters', 'coverUrl', 'price', 'narrator', 'fileUrl', 'title']
+--------------------------------------------------
+Title: Anthem
+  coverUrl: https://archive.org/services/img/anthem_librivox
+  coverImage: N/A
+  All keys: ['createdAt', 'duration', 'description', 'author', 'id', 'category', 'chapters', 'coverUrl', 'narrator', 'price', 'fileUrl', 'title']
+--------------------------------------------------

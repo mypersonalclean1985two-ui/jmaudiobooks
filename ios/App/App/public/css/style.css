@@ -298,48 +298,9 @@ body {
     background-clip: text;
 }
 
-.search-section {
-    position: absolute;
-    top: calc(120px + env(safe-area-inset-top));
-    left: 0;
-    width: 100%;
-    padding: 0 20px 16px;
-    background: 0 0;
-    z-index: 40
-}
-
-.search-wrapper {
-    position: relative;
-    width: 100%
-}
-
-.search-icon {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-secondary);
-    font-size: 1.1rem
-}
-
-.search-input {
-    width: 100%;
-    padding: 14px 16px 14px 48px;
-    border-radius: 16px;
-    border: none;
-    background-color: var(--bg-card);
-    color: var(--text-primary);
-    font-size: .95rem;
-    outline: 0
-}
-
-.search-input::placeholder {
-    color: var(--text-secondary)
-}
-
 .main-content {
     position: absolute;
-    top: calc(200px + env(safe-area-inset-top));
+    top: calc(130px + env(safe-area-inset-top));
     bottom: 70px;
     left: 0;
     width: 100%;
@@ -573,7 +534,7 @@ body {
 
 .book-card {
     cursor: pointer;
-    transition: transform .2s;
+    transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
     min-width: 140px;
     width: 140px;
     flex-shrink: 0;
@@ -611,7 +572,8 @@ body {
 }
 
 .book-card:hover {
-    transform: translateY(-4px)
+    transform: translateY(-8px) scale(1.02);
+    filter: brightness(1.1);
 }
 
 .book-cover {
@@ -619,8 +581,13 @@ body {
     height: 210px;
     border-radius: 12px;
     object-fit: cover;
-    box-shadow: var(--shadow-lg);
-    margin-bottom: 8px
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, .5);
+    margin-bottom: 8px;
+    transition: box-shadow .3s ease;
+}
+
+.book-card:hover .book-cover {
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, .7);
 }
 
 .book-title {
@@ -628,7 +595,7 @@ body {
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 2px;
-    OVERFLOW_MARK;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap
 }
@@ -636,7 +603,7 @@ body {
 .book-author {
     font-size: .75rem;
     color: var(--text-secondary);
-    OVERFLOW_MARK;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap
 }
@@ -645,14 +612,15 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    margin-top: 24px
+    margin-bottom: 20px;
+    margin-top: 32px
 }
 
 .section-header-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--text-primary)
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
 }
 
 .see-all {
@@ -1356,4 +1324,79 @@ input:checked+.slider:before {
 .section-header {
     margin-top: 15px;
     margin-bottom: 10px;
+}
+
+/* Trial & Membership Components */
+.trial-counter-card {
+    background: rgba(245, 158, 11, 0.05);
+    border: 1px dashed rgba(245, 158, 11, 0.3);
+    border-radius: 16px;
+    padding: 16px;
+    margin: 16px 0;
+    text-align: left;
+}
+
+.trial-counter-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.trial-counter-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--accent-primary);
+    letter-spacing: 1px;
+}
+
+.trial-counter-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.trial-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.trial-progress-fill {
+    height: 100%;
+    background: var(--accent-primary);
+    border-radius: 2px;
+}
+
+.membership-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.membership-badge.premium {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+}
+
+.membership-badge.trial {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--accent-primary);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.upgrade-btn {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.upgrade-btn:active {
+    transform: scale(0.98);
 }

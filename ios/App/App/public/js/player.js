@@ -5,6 +5,7 @@ let sleepTimerTimeout = null;
 let chapters = [];
 let bookmarks = [];
 let activeTab = 'chapters';
+let chapterItemsCache = null; // Declare early to prevent hoisting issues
 let sessionSeconds = 0;
 let lastStatsUpdate = Date.now();
 let stats = { streak: 0, weekMinutes: 0, completedBooks: 0, lastPlayed: null };
@@ -12,6 +13,17 @@ let stats = { streak: 0, weekMinutes: 0, completedBooks: 0, lastPlayed: null };
 // SVG Constants for UI Sync
 const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
 const pauseSvg = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+
+// CORS Proxy Helper - Bypass archive.org CORS restrictions
+function getCorsProxyUrl(url) {
+    // Only proxy archive.org URLs
+    if (!url || !url.includes('archive.org')) {
+        return url;
+    }
+
+    // Use AllOrigins proxy (reliable and free)
+    return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+}
 
 // Load preliminary stats
 const savedStats = localStorage.getItem('stats');
@@ -26,11 +38,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. IMMEDIATE PARAMS CHECK (FASTEST)
     const urlParams = new URLSearchParams(window.location.search);
-    const audioUrl = urlParams.get('file');
+    const rawAudioUrl = urlParams.get('file');
+    const audioUrl = getCorsProxyUrl(rawAudioUrl); // Apply CORS proxy
     const title = urlParams.get('title');
     const bookId = urlParams.get('id');
-    const coverUrl = urlParams.get('cover');
+    const rawCoverUrl = urlParams.get('cover');
+    const coverUrl = getCorsProxyUrl(rawCoverUrl); // Apply CORS proxy
     const author = urlParams.get('author');
+
+    console.log('Audio URL (proxied):', audioUrl);
 
     // Resume Logic
     const savedReading = localStorage.getItem('currentlyReading');
@@ -117,40 +133,89 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupControls();
     updateChapterCount();
 
-    // Default chapters until doc arrives
-    chapters = [{ title: "Audiobook", start: 0, duration: 0 }];
-    renderList();
+    // Don't set fallback chapters yet - wait for Firestore fetch to complete
+    console.log("Player: Waiting for Firestore data before rendering chapters...");
 
     // Async Fetching
     if (bookId) {
+        console.log("Player: Starting async fetch for bookId:", bookId);
         Promise.all([
             window.firebaseFirestore.collection('books').doc(bookId).get().then(doc => {
+                console.log("Player: Firestore fetch complete. Doc exists:", doc.exists);
                 if (doc.exists) {
                     currentBook = doc.data();
-                    console.log("Player: Fetched book data", currentBook);
+                    console.log("Player: Fetched book data:", currentBook);
+                    console.log("Player: Book has chapters field:", !!currentBook.chapters);
+                    console.log("Player: Chapters is array:", Array.isArray(currentBook.chapters));
+                    console.log("Player: Chapters length:", currentBook.chapters?.length);
+
+                    // Log raw chapter data for debugging
+                    if (currentBook.chapters && currentBook.chapters.length > 0) {
+                        console.log("Player: Raw chapters data:", JSON.stringify(currentBook.chapters.slice(0, 2), null, 2));
+                    }
 
                     if (currentBook.chapters && Array.isArray(currentBook.chapters) && currentBook.chapters.length > 0) {
-                        console.log(`Player: Found ${currentBook.chapters.length} chapters.`);
+                        console.log(`Player: ✅ Found ${currentBook.chapters.length} chapters!`);
                         chapters = currentBook.chapters;
+                        console.log("Player: Chapters array assigned. First chapter:", chapters[0]);
+                        console.log("Player: Calling renderList() with", chapters.length, "chapters");
                         renderList();
+                        updateChapterCount();
                     } else {
-                        console.warn("Player: No chapters array found. Creating default 'Full Audio' chapter.");
+                        console.warn("Player: ⚠️ No chapters array found in Firestore. Using fallback.");
+                        console.warn("Player: This book may need chapters imported from LibriVox.");
                         // Create a single chapter representing the whole book
                         chapters = [{
                             title: currentBook.title || "Full Audiobook",
                             start: 0,
                             duration: audioPlayer.duration || 0 // Will update on metadata load
                         }];
+                        console.log("Player: Fallback chapter created:", chapters);
                         renderList();
+                        updateChapterCount();
                     }
                 } else {
-                    console.error("Player: Book document does not exist!", bookId);
+                    console.error("Player: ❌ Book document does not exist in Firestore!", bookId);
+                    // Ensure we still have a default chapter
+                    chapters = [{ title: "Audiobook", start: 0, duration: 0 }];
+                    renderList();
+                    updateChapterCount();
                 }
-            }).catch(err => console.error("Player: Error fetching book details:", err)),
+            }).catch(err => {
+                console.error("Player: ❌ Error fetching book details:", err);
+                console.error("Player: Error details:", err.message, err.stack);
+                // Ensure we still have a default chapter
+                chapters = [{ title: "Audiobook (Error Loading)", start: 0, duration: 0 }];
+                renderList();
+                updateChapterCount();
+            }),
             window.currentUser ? loadProgress(bookId) : Promise.resolve(),
             window.currentUser ? loadBookmarks(bookId) : Promise.resolve(),
             isTrialActive(true) // Refresh cache in background
-        ]).catch(e => console.warn("Background fetch failed:", e));
+        ]).catch(e => {
+            console.error("Player: ❌ Promise.all failed:", e);
+            // Ensure we have fallback chapters if everything fails
+            if (chapters.length === 0) {
+                chapters = [{ title: "Audiobook (Loading Failed)", start: 0, duration: 0 }];
+                renderList();
+                updateChapterCount();
+            }
+        });
+    } else {
+        console.warn("Player: ⚠️ No bookId provided in URL parameters!");
+        // Set fallback for no bookId case
+        chapters = [{ title: "Audiobook", start: 0, duration: 0 }];
+        renderList();
+        updateChapterCount();
+    }
+
+    // Buffering event listeners - must be inside DOMContentLoaded where audioPlayer is defined
+    if (audioPlayer) {
+        audioPlayer.addEventListener('waiting', () => { isBuffering = true; handleBuffering(); });
+        audioPlayer.addEventListener('playing', () => { isBuffering = false; handleBuffering(); });
+        audioPlayer.addEventListener('canplay', () => { isBuffering = false; handleBuffering(); });
+        audioPlayer.addEventListener('stalled', () => { isBuffering = true; handleBuffering(); });
+        audioPlayer.addEventListener('progress', handleBuffering);
     }
 });
 
@@ -338,25 +403,22 @@ function updateProgress() {
     }
 }
 
-audioPlayer.addEventListener('waiting', () => { isBuffering = true; handleBuffering(); });
-audioPlayer.addEventListener('playing', () => { isBuffering = false; handleBuffering(); });
-audioPlayer.addEventListener('canplay', () => { isBuffering = false; handleBuffering(); });
-audioPlayer.addEventListener('stalled', () => { isBuffering = true; handleBuffering(); });
-audioPlayer.addEventListener('progress', handleBuffering);
 
 function updateChapterCount() {
     const chapterCount = document.getElementById('chapter-count');
     const bookmarkCount = document.getElementById('bookmark-count');
+    console.log("Player: updateChapterCount called. Chapters:", chapters.length, "Bookmarks:", bookmarks.length);
     if (chapterCount) chapterCount.textContent = `(${chapters.length})`;
     if (bookmarkCount) bookmarkCount.textContent = `(${bookmarks.length})`;
 }
 
 function renderList() {
     const chapterContainer = document.getElementById('chapter-list');
+    console.log("Player: renderList called for chapters. Container found:", !!chapterContainer, "Chapters:", chapters);
     if (chapterContainer) {
         chapterContainer.innerHTML = '';
         if (Array.isArray(chapters) && chapters.length > 0) {
-            // VERIFIED FIX: Robust rendering ensures chapters always display
+            console.log("Player: Rendering", chapters.length, "chapters");
             chapters.forEach((chapter, index) => {
                 const div = document.createElement('div');
                 div.className = 'list-item chapter-item';
@@ -376,15 +438,19 @@ function renderList() {
                 };
                 chapterContainer.appendChild(div);
             });
+            console.log("Player: Chapters rendered successfully");
         } else {
             console.warn("renderList: Chapters is empty or not an array", chapters);
             chapterContainer.innerHTML = '<div style="padding:16px; color:#aaa; text-align:center">No chapters available</div>';
         }
         chapterItemsCache = null; // Invalidate cache
         updateActiveChapter();
+    } else {
+        console.error("Player: chapter-list container not found in DOM!");
     }
 
     const bookmarkContainer = document.getElementById('bookmark-list');
+    console.log("Player: renderList called. Container found:", !!bookmarkContainer);
     if (bookmarkContainer) {
         bookmarkContainer.innerHTML = '';
         if (bookmarks.length === 0) {
@@ -406,7 +472,7 @@ function renderList() {
     updateChapterCount();
 }
 
-let chapterItemsCache = null;
+// chapterItemsCache now declared at top of file
 function updateActiveChapter() {
     const time = audioPlayer.currentTime;
     if (!chapterItemsCache) chapterItemsCache = document.querySelectorAll('.chapter-item');
@@ -487,17 +553,39 @@ async function saveProgress(completed = false) {
 
 async function addBookmark() {
     const bookId = new URLSearchParams(window.location.search).get('id');
-    if (!bookId || !window.currentUser) return;
+    if (!bookId || !window.currentUser) {
+        alert("Please sign in to bookmark!");
+        return;
+    }
+    console.log("Player: addBookmark called for book", bookId);
     const bm = { id: Date.now().toString(), time: audioPlayer.currentTime, createdAt: new Date().toISOString() };
     bookmarks.push(bm);
+    console.log("Player: Current bookmarks count:", bookmarks.length);
     renderList();
+
+    // UI Feedback
+    const btn = document.getElementById('bookmark-btn');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '✅';
+    setTimeout(() => btn.innerHTML = originalContent, 2000);
+
     try {
-        await window.firebaseFirestore.collection('users').doc(window.currentUser.uid).set({
-            library: firebase.firestore.FieldValue.arrayUnion(bookId),
-            lastUpdated: new Date()
+        const db = window.firebaseDB;
+        console.log("Player: Saving bookmark to Firestore for user", window.currentUser.uid);
+        await db.collection('users').doc(window.currentUser.uid).set({
+            library: window.firebase.firestore.FieldValue.arrayUnion(bookId),
+            lastUpdated: window.firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
-        await window.firebaseFirestore.collection('users').doc(window.currentUser.uid).collection('bookmarks').doc(bookId).set({ items: bookmarks, lastUpdated: new Date() }, { merge: true });
-    } catch (e) { console.error("CRITICAL Bookmarking Error:", e); }
+        await db.collection('users').doc(window.currentUser.uid).collection('bookmarks').doc(bookId).set({
+            items: bookmarks,
+            lastUpdated: window.firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        console.log("Player: Bookmark saved and book added to library successfully.");
+    } catch (e) {
+        console.error("CRITICAL Bookmarking Error:", e);
+        btn.innerHTML = '❌';
+        setTimeout(() => btn.innerHTML = originalContent, 2000);
+    }
 }
 
 async function loadBookmarks(bookId) {

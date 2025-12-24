@@ -105,6 +105,7 @@ function initApp() {
         // PERMISSIVE DEFAULTS: Don't block during sync or for guests who see "locked" content separately
         if (!window.authInitialized) return true;
         if (!window.currentUser || userProfile.isGuest) return true;
+        if (userProfile.subscriptionStatus === 'active') return true; // Subscribed users are always active
         if (!userProfile.trialStartDate) return true;
 
         const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
@@ -112,6 +113,19 @@ function initApp() {
         const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
 
         return diffDays <= 14; // 14-day rule
+    };
+
+    window.getTrialDaysRemaining = () => {
+        if (!window.currentUser || userProfile.isGuest || !userProfile.trialStartDate) return 0;
+        if (userProfile.subscriptionStatus === 'active') return 0;
+
+        const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
+        const now = new Date();
+        const diffMs = now - start;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const remaining = 14 - diffDays;
+
+        return remaining > 0 ? remaining : 0;
     };
 
     // Auth State Listener
@@ -149,7 +163,6 @@ function initApp() {
 
                 if (firestoreProfile) {
                     console.log("App: Found Firestore profile:", firestoreProfile);
-                    // Only overwrite if Firestore has valid data (not empty strings)
                     if (firestoreProfile.displayName && firestoreProfile.displayName.trim() !== '') {
                         userProfile.name = firestoreProfile.displayName;
                     }
@@ -162,22 +175,23 @@ function initApp() {
                     if (firestoreProfile.trialStartDate) {
                         userProfile.trialStartDate = firestoreProfile.trialStartDate;
                     }
+                    if (firestoreProfile.library) {
+                        userProfile.library = firestoreProfile.library;
+                        console.log("App: Synced library from Firestore:", userProfile.library.length, "items");
+                    }
                 } else {
                     // No Firestore profile? Check if we should migrate Guest Data
                     console.log("App: No Firestore profile found. Checking for guest migration...");
-                    let updates = {};
+                    let updates = { trialStartDate: new Date() };
+                    userProfile.trialStartDate = updates.trialStartDate;
 
-                    // If we migrated from Guest with a custom name, use that. 
-                    // OTHERWISE, keep the Google Name (don't overwrite with 'User')
                     if (previousGuestName) {
                         userProfile.name = previousGuestName;
                         updates.displayName = previousGuestName;
                     } else if (!userProfile.name) {
-                        // If Auth didn't have a name either, fallback
                         userProfile.name = 'Book Lover';
                         updates.displayName = 'Book Lover';
                     } else {
-                        // Use the Auth name (Google Name) for the initial Firestore save
                         updates.displayName = userProfile.name;
                     }
 
@@ -189,7 +203,6 @@ function initApp() {
                         updates.photoURL = userProfile.image;
                     }
 
-                    // Save this initial state to Firestore so it persists
                     await window.firebaseHelpers.updateUserProfile(user.uid, {
                         ...updates,
                         email: userProfile.email
@@ -281,11 +294,7 @@ function initApp() {
                         <input type="email" id="login-email" class="auth-input" placeholder="you@example.com">
                     </div>
                     
-                    <!-- Password Field with Toggle -->
                     <div>
-                        <p id="splash-status"
-                        style="color:rgba(255,255,255,0.7);font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;animation: statusFade 1.5s infinite;">
-                        Initializing...</p>
                         <div class="password-field-wrapper">
                             <input type="password" id="login-password" class="auth-input" placeholder="••••••••">
                             <button type="button" class="password-toggle-btn" id="toggle-password">👁️</button>
@@ -312,11 +321,6 @@ function initApp() {
                     
                     <!-- Success Message -->
                     <div id="auth-success" style="display:none;" class="auth-success-message"></div>
-                    
-                    <!-- Divider -->
-                    <div class="auth-divider" style="display:none">SECURE SOCIAL LOGIN</div>
-                    
-                    <!-- Buttons Hidden for Simplification -->
                     
                     <!-- Toggle between Login/Signup -->
                     <div style="text-align:center;margin-top:10px;">
@@ -346,8 +350,6 @@ function initApp() {
         const successDiv = document.getElementById('auth-success');
         const forgotPasswordLink = document.getElementById('forgot-password-link');
         const forgotPasswordContainer = document.getElementById('forgot-password-container');
-        const googleSignInBtn = document.getElementById('google-signin-btn');
-        const appleSignInBtn = document.getElementById('apple-signin-btn');
         const strengthContainer = document.getElementById('password-strength');
         const strengthFill = document.getElementById('strength-fill');
         const strengthText = document.getElementById('strength-text');
@@ -371,174 +373,168 @@ function initApp() {
         }
 
         // Password Strength Indicator
-        passwordInput.addEventListener('input', () => {
-            if (!isLogin) {
-                const result = calculatePasswordStrength(passwordInput.value);
-                strengthFill.className = `password-strength-fill ${result.strength}`;
-                strengthText.className = `password-strength-text ${result.strength}`;
-                strengthText.textContent = result.text;
-            }
-        });
-
-        // Toggle Password Visibility
-        togglePasswordBtn.addEventListener('click', () => {
-            const type = passwordInput.type === 'password' ? 'text' : 'password';
-            passwordInput.type = type;
-            togglePasswordBtn.textContent = type === 'password' ? '👁️' : '🙈';
-        });
+        if (passwordInput) {
+            passwordInput.addEventListener('input', () => {
+                if (!isLogin) {
+                    const result = calculatePasswordStrength(passwordInput.value);
+                    if (strengthFill && strengthText) {
+                        strengthFill.className = `password-strength-fill ${result.strength}`;
+                        strengthText.className = `password-strength-text ${result.strength}`;
+                        strengthText.textContent = result.text;
+                    }
+                }
+            });
+        }
 
         // Close Modal
-        document.getElementById('close-login-modal').onclick = () => {
-            loginModal.style.display = 'none';
-            errorDiv.style.display = 'none';
-            successDiv.style.display = 'none';
-        };
+        const closeBtn = document.getElementById('close-login-modal');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                if (loginModal) loginModal.style.display = 'none';
+                if (errorDiv) errorDiv.style.display = 'none';
+                if (successDiv) successDiv.style.display = 'none';
+            };
+        } else { console.warn("Auth: Close button not found"); }
 
         // Toggle between Login/Signup
-        switchLink.onclick = (e) => {
-            e.preventDefault();
-            isLogin = !isLogin;
-            title.textContent = isLogin ? 'Log In' : 'Sign Up';
-            nameField.style.display = isLogin ? 'none' : 'block';
-            strengthContainer.style.display = isLogin ? 'none' : 'block';
-            forgotPasswordContainer.style.display = isLogin ? 'block' : 'none';
-            btn.textContent = isLogin ? 'Log In' : 'Sign Up';
-            switchText.textContent = isLogin ? "Don't have an account? " : "Already have an account? ";
-            switchLink.textContent = isLogin ? 'Sign Up' : 'Log In';
-            errorDiv.style.display = 'none';
-            successDiv.style.display = 'none';
-        };
+        if (switchLink) {
+            switchLink.onclick = (e) => {
+                e.preventDefault();
+                isLogin = !isLogin;
+                if (title) title.textContent = isLogin ? 'Log In' : 'Sign Up';
+                if (nameField) nameField.style.display = isLogin ? 'none' : 'block';
+                if (strengthContainer) strengthContainer.style.display = isLogin ? 'none' : 'block';
+                if (forgotPasswordContainer) forgotPasswordContainer.style.display = isLogin ? 'block' : 'none';
+                if (btn) btn.textContent = isLogin ? 'Log In' : 'Sign Up';
+                if (switchText) switchText.textContent = isLogin ? "Don't have an account? " : "Already have an account? ";
+                if (switchLink) switchLink.textContent = isLogin ? 'Sign Up' : 'Log In';
+                errorDiv.style.display = 'none';
+                successDiv.style.display = 'none';
+            };
+        }
+
+        // Toggle Password Visibility
+        if (togglePasswordBtn) {
+            togglePasswordBtn.addEventListener('click', () => {
+                const type = passwordInput.type === 'password' ? 'text' : 'password';
+                passwordInput.type = type;
+                togglePasswordBtn.textContent = type === 'password' ? '👁️' : '🙈';
+            });
+        }
 
         // Forgot Password
-        forgotPasswordLink.onclick = async (e) => {
-            e.preventDefault();
-            const email = emailInput.value.trim();
+        if (forgotPasswordLink) {
+            forgotPasswordLink.onclick = async (e) => {
+                e.preventDefault();
+                const email = emailInput.value.trim();
 
-            if (!email) {
-                errorDiv.textContent = 'Please enter your email address';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            try {
-                btn.classList.add('auth-loading');
-                btn.disabled = true;
-                await window.firebaseHelpers.sendPasswordReset(email);
-                errorDiv.style.display = 'none';
-                successDiv.textContent = 'Password reset email sent! Check your inbox.';
-                successDiv.style.display = 'block';
-            } catch (err) {
-                console.error(err);
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = 'block';
-            } finally {
-                btn.classList.remove('auth-loading');
-                btn.disabled = false;
-            }
-        };
-
-        // Google Sign-In
-        // Google Sign-In
-        googleSignInBtn.onclick = async () => {
-            try {
-                googleSignInBtn.classList.add('auth-loading');
-                googleSignInBtn.disabled = true;
-                errorDiv.style.display = 'none';
-                await window.firebaseHelpers.signInWithGoogle();
-                loginModal.style.display = 'none';
-            } catch (err) {
-                console.error(err);
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = 'block';
-            } finally {
-                googleSignInBtn.classList.remove('auth-loading');
-                googleSignInBtn.disabled = false;
-            }
-        };
-
-        // Apple Sign-In
-        appleSignInBtn.onclick = async () => {
-            try {
-                appleSignInBtn.classList.add('auth-loading');
-                appleSignInBtn.disabled = true;
-                errorDiv.style.display = 'none';
-                await window.firebaseHelpers.signInWithApple();
-                loginModal.style.display = 'none';
-            } catch (err) {
-                console.error(err);
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = 'block';
-            } finally {
-                appleSignInBtn.classList.remove('auth-loading');
-                appleSignInBtn.disabled = false;
-            }
-        };
-
-        // Email/Password Auth
-        btn.onclick = async () => {
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            const name = nameInput.value.trim();
-
-            errorDiv.style.display = 'none';
-            successDiv.style.display = 'none';
-
-            // Validation
-            if (!email || !password || (!isLogin && !name)) {
-                errorDiv.textContent = 'Please fill in all fields';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            try {
-                btn.classList.add('auth-loading');
-                btn.disabled = true;
-
-                if (isLogin) {
-                    await window.firebaseHelpers.signInWithEmail(email, password);
-                } else {
-                    const strength = calculatePasswordStrength(password);
-                    if (strength.score < 2) {
-                        throw new Error('Password is too weak. Use at least 8 characters with letters and numbers.');
-                    }
-                    await window.firebaseHelpers.signUpWithEmail(email, password, name);
-                    successDiv.textContent = 'Account created! Welcome.';
-                    successDiv.style.display = 'block';
+                if (!email) {
+                    errorDiv.textContent = 'Please enter your email address';
+                    errorDiv.style.display = 'block';
+                    return;
                 }
 
-                setTimeout(() => {
-                    loginModal.style.display = 'none';
+                try {
+                    btn.classList.add('auth-loading');
+                    btn.disabled = true;
+                    await window.firebaseHelpers.sendPasswordReset(email);
                     errorDiv.style.display = 'none';
-                    successDiv.style.display = 'none';
-                }, isLogin ? 0 : 2000);
-            } catch (err) {
-                console.error(err);
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = 'block';
-            } finally {
-                btn.classList.remove('auth-loading');
-                btn.disabled = false;
-            }
-        };
+                    successDiv.textContent = 'Password reset email sent! Check your inbox.';
+                    successDiv.style.display = 'block';
+                } catch (err) {
+                    console.error(err);
+                    errorDiv.textContent = err.message;
+                    errorDiv.style.display = 'block';
+                } finally {
+                    btn.classList.remove('auth-loading');
+                    btn.disabled = false;
+                }
+            };
+        }
+
+        // Social Sign-In Logic Removed
+
+
+        // Email/Password Auth
+        if (btn) {
+            btn.onclick = async () => {
+                if (!emailInput || !passwordInput || !nameInput) return;
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+                const name = nameInput.value.trim();
+
+                if (errorDiv) errorDiv.style.display = 'none';
+                if (successDiv) successDiv.style.display = 'none';
+
+                // Validation
+                if (!email || !password || (!isLogin && !name)) {
+                    if (errorDiv) {
+                        errorDiv.textContent = 'Please fill in all fields';
+                        errorDiv.style.display = 'block';
+                    }
+                    return;
+                }
+
+                try {
+                    btn.classList.add('auth-loading');
+                    btn.disabled = true;
+
+                    if (isLogin) {
+                        await window.firebaseHelpers.signInWithEmail(email, password);
+                    } else {
+                        const strength = calculatePasswordStrength(password);
+                        if (strength.score < 2) {
+                            throw new Error('Password is too weak. Use at least 8 characters with letters and numbers.');
+                        }
+                        await window.firebaseHelpers.signUpWithEmail(email, password, name);
+                        if (successDiv) {
+                            successDiv.textContent = 'Account created! Welcome.';
+                            successDiv.style.display = 'block';
+                        }
+                    }
+
+                    setTimeout(() => {
+                        if (loginModal) loginModal.style.display = 'none';
+                        if (errorDiv) errorDiv.style.display = 'none';
+                        if (successDiv) successDiv.style.display = 'none';
+                    }, isLogin ? 0 : 2000);
+                } catch (err) {
+                    console.error(err);
+                    if (errorDiv) {
+                        errorDiv.textContent = err.message;
+                        errorDiv.style.display = 'block';
+                    }
+                } finally {
+                    if (btn) {
+                        btn.classList.remove('auth-loading');
+                        btn.disabled = false;
+                    }
+                }
+            };
+        }
 
         // Keyboard shortcut - Enter to submit
         [emailInput, passwordInput, nameInput].forEach(input => {
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    btn.click();
-                }
-            });
+            if (input) {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (btn) btn.click();
+                    }
+                });
+            }
         });
 
         // Click outside to close
-        loginModal.onclick = (e) => {
-            if (e.target === loginModal) {
-                loginModal.style.display = 'none';
-                errorDiv.style.display = 'none';
-                successDiv.style.display = 'none';
-            }
-        };
+        if (loginModal) {
+            loginModal.onclick = (e) => {
+                if (e.target === loginModal) {
+                    loginModal.style.display = 'none';
+                    if (errorDiv) errorDiv.style.display = 'none';
+                    if (successDiv) successDiv.style.display = 'none';
+                }
+            };
+        }
     }
 
     // Initialize the login modal
@@ -558,77 +554,422 @@ function initApp() {
         }
     };
 
-    // IAP: Product Constants
-    const PRODUCT_ID_MONTHLY = 'premium_monthly'; // MUST Match App Store Connect
+    // IAP: Product Constants - MUST match App Store Connect exactly (case-sensitive)
+    const PRODUCT_ID_MONTHLY = 'com.jmaudiobooks.jmaudiobooks.monthly';
+    const PRODUCT_ID_YEARLY = 'com.jmaudiobooks.jmaudiobooks.yearly';
+
+    // Store prices from StoreKit (will be updated when products load)
+    let monthlyPrice = '$3.99'; // Fallback only
+    let yearlyPrice = '$25.99'; // Fallback only
+
+    // Track product loading state
+    let productsLoaded = false;
+    let loadedProductIds = [];
+    let productsLoadedCount = 0;
 
     // IAP: Initialize Store
     document.addEventListener('deviceready', function () {
+        console.log('[IAP DEBUG] ========================================');
+        console.log('[IAP DEBUG] 🆔 Bundle ID: com.jmaudiobooks.jmaudiobooks');
+        console.log('[IAP DEBUG] 🆔 Platform:', window.Capacitor?.getPlatform() || 'unknown');
+        console.log('[IAP DEBUG] ========================================');
+
         if (!window.store) {
             console.log('Store not available');
             return;
         }
 
-        // 1. Register Product
-        store.register({
-            id: PRODUCT_ID_MONTHLY,
-            type: store.PAID_SUBSCRIPTION,
-            alias: 'premium_monthly'
-        });
+        // 1. Register BOTH Products
+        console.log('[IAP DEBUG] ========================================');
+        console.log('[IAP DEBUG] 📤 REQUESTING PRODUCTS FROM STOREKIT');
+        console.log('[IAP DEBUG] ========================================');
+        console.log('[IAP DEBUG] Product 1 ID:', PRODUCT_ID_MONTHLY);
+        console.log('[IAP DEBUG] Product 2 ID:', PRODUCT_ID_YEARLY);
+        console.log('[IAP DEBUG] Total products requested: 2');
+        console.log('[IAP DEBUG] ========================================');
+
+        store.register([
+            {
+                id: PRODUCT_ID_MONTHLY,
+                type: store.PAID_SUBSCRIPTION
+            },
+            {
+                id: PRODUCT_ID_YEARLY,
+                type: store.PAID_SUBSCRIPTION
+            }
+        ]);
+
+        console.log('[IAP DEBUG] Products registered successfully');
+        console.log('[IAP DEBUG] Calling store.refresh() to fetch from StoreKit...');
+
+        // Log initial product count
+        setTimeout(() => {
+            const allProducts = window.store.products;
+            const productCount = allProducts ? Object.keys(allProducts).length : 0;
+            console.log('[IAP DEBUG] ========================================');
+            console.log('[IAP DEBUG] 📥 PRODUCTS RETURNED FROM STOREKIT');
+            console.log('[IAP DEBUG] ========================================');
+            console.log('[IAP DEBUG] 📊 Products REQUESTED: 2');
+            console.log('[IAP DEBUG] 📊 Products RETURNED:', productCount);
+            console.log('[IAP DEBUG] 📊 Product IDs returned:', allProducts ? Object.keys(allProducts) : []);
+            console.log('[IAP DEBUG] 📊 Full products object:', allProducts);
+            console.log('[IAP DEBUG] ========================================');
+
+            if (productCount === 0) {
+                console.error('[IAP DEBUG] ❌❌❌ CRITICAL ERROR ❌❌❌');
+                console.error('[IAP DEBUG] ❌ NO PRODUCTS LOADED FROM STOREKIT!');
+                console.error('[IAP DEBUG] ❌ StoreKit returned 0 products');
+                console.error('[IAP DEBUG] ❌ Purchase will NOT work');
+                console.error('[IAP DEBUG] ❌ Possible causes:');
+                console.error('[IAP DEBUG] ❌   1. Products not approved in App Store Connect');
+                console.error('[IAP DEBUG] ❌   2. Bundle ID mismatch (expected: com.jmaudiobooks.jmaudiobooks)');
+                console.error('[IAP DEBUG] ❌   3. Product IDs don\'t match App Store Connect');
+                console.error('[IAP DEBUG] ❌   4. Build uploaded before products were configured');
+                console.error('[IAP DEBUG] ❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌');
+            } else if (productCount < 2) {
+                console.warn('[IAP DEBUG] ⚠️ WARNING: Only', productCount, 'product(s) loaded');
+                console.warn('[IAP DEBUG] ⚠️ Expected 2 products (monthly + yearly)');
+                console.warn('[IAP DEBUG] ⚠️ Check App Store Connect configuration');
+            } else {
+                console.log('[IAP DEBUG] ✅ SUCCESS: All', productCount, 'products loaded correctly!');
+            }
+        }, 3000);
 
         // 2. Setup Event Listeners
-        // Log all events for debugging
-        store.when('product').updated(function (p) {
-            console.log('IAP Update:', p);
+        // Update prices when products load from StoreKit
+        store.when('product').updated(function (product) {
+            console.log('[IAP DEBUG] Product Updated from StoreKit:');
+            console.log('[IAP DEBUG] - Product ID:', product.id);
+            console.log('[IAP DEBUG] - Price:', product.price);
+            console.log('[IAP DEBUG] - Title:', product.title);
+            console.log('[IAP DEBUG] - Description:', product.description);
+            console.log('[IAP DEBUG] - Full product object:', product);
+
+            // Track loaded products
+            if (!loadedProductIds.includes(product.id)) {
+                loadedProductIds.push(product.id);
+                productsLoadedCount++;
+                console.log('[IAP DEBUG] 📦 Product loaded count:', productsLoadedCount, '/', 2);
+            }
+
+            // Update monthly price from StoreKit
+            if (product.id === PRODUCT_ID_MONTHLY && product.price) {
+                monthlyPrice = product.price;
+                console.log('[IAP DEBUG] ✅ Monthly product loaded - Price:', monthlyPrice);
+                updateSubscriptionPrices();
+            }
+
+            // Update yearly price from StoreKit
+            if (product.id === PRODUCT_ID_YEARLY && product.price) {
+                yearlyPrice = product.price;
+                console.log('[IAP DEBUG] ✅ Yearly product loaded - Price:', yearlyPrice);
+                updateSubscriptionPrices();
+            }
+
+            // Check if both products are loaded
+            if (loadedProductIds.includes(PRODUCT_ID_MONTHLY) && loadedProductIds.includes(PRODUCT_ID_YEARLY)) {
+                productsLoaded = true;
+                console.log('[IAP DEBUG] 🎉 ALL PRODUCTS LOADED - Purchase is now enabled');
+                enableSubscribeButton();
+            }
+
+            // Check if product ID doesn't match expected IDs
+            if (product.id !== PRODUCT_ID_MONTHLY && product.id !== PRODUCT_ID_YEARLY) {
+                console.warn('[IAP DEBUG] ⚠️ Unknown product ID received:', product.id);
+            }
         });
 
-        // Handle Approved Purchase (User paid)
+        // Handle Approved Purchase for MONTHLY
         store.when(PRODUCT_ID_MONTHLY).approved(function (p) {
-            console.log('IAP Approved:', p);
-            // Verify receipt here (simulated verification for now)
+            console.log('IAP Approved (Monthly):', p);
             p.verify();
         });
 
-        // Handle Verified Purchase (Receipt valid)
+        // Handle Approved Purchase for YEARLY
+        store.when(PRODUCT_ID_YEARLY).approved(function (p) {
+            console.log('IAP Approved (Yearly):', p);
+            p.verify();
+        });
+
+        // Handle Verified Purchase for MONTHLY
         store.when(PRODUCT_ID_MONTHLY).verified(async function (p) {
-            console.log('IAP Verified:', p);
+            console.log('IAP Verified (Monthly):', p);
 
             if (window.currentUser) {
                 await window.firebaseHelpers.updateUserSubscription(window.currentUser.uid, {
                     status: 'active',
                     plan: 'monthly',
+                    productId: PRODUCT_ID_MONTHLY,
                     expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
                     purchasedAt: new Date()
                 });
 
                 window.globalUserProfile.subscriptionStatus = 'active';
+                window.globalUserProfile.subscriptionPlan = 'monthly';
                 localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
 
-                console.log("Subscription Active! Thank you.");
+                console.log("Monthly Subscription Active!");
                 window.closeModal('subscription-modal');
-                // Surgical refresh instead of full reload
                 renderHome();
                 renderDiscover();
             }
             p.finish();
         });
 
-        // Handle Errors
-        store.error(function (e) {
-            console.error("IAP Error Global:", e);
-            const subBtn = document.getElementById('subscribe-btn');
-            if (subBtn) {
-                subBtn.textContent = "Subscribe Error";
-                subBtn.disabled = false;
-                setTimeout(() => subBtn.textContent = "Subscribe Now", 3000);
+        // Handle Verified Purchase for YEARLY
+        store.when(PRODUCT_ID_YEARLY).verified(async function (p) {
+            console.log('IAP Verified (Yearly):', p);
+
+            if (window.currentUser) {
+                await window.firebaseHelpers.updateUserSubscription(window.currentUser.uid, {
+                    status: 'active',
+                    plan: 'yearly',
+                    productId: PRODUCT_ID_YEARLY,
+                    expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days
+                    purchasedAt: new Date()
+                });
+
+                window.globalUserProfile.subscriptionStatus = 'active';
+                window.globalUserProfile.subscriptionPlan = 'yearly';
+                localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
+
+                console.log("Yearly Subscription Active!");
+                window.closeModal('subscription-modal');
+                renderHome();
+                renderDiscover();
             }
-            console.error("Store Error: " + e.message);
+            p.finish();
         });
 
-        // 3. Refresh Store
+        // Handle Owned (Restore Purchases)
+        store.when(PRODUCT_ID_MONTHLY).owned(function (product) {
+            console.log('Monthly subscription owned (active)');
+            unlockPremiumFeatures('monthly');
+        });
+
+        store.when(PRODUCT_ID_YEARLY).owned(function (product) {
+            console.log('Yearly subscription owned (active)');
+            unlockPremiumFeatures('yearly');
+        });
+
+        // Handle Errors
+        store.error(function (e) {
+            console.error('[IAP DEBUG] ❌❌❌ STORE ERROR OCCURRED ❌❌❌');
+            console.error('[IAP DEBUG] Error object:', e);
+            console.error('[IAP DEBUG] Error code:', e.code);
+            console.error('[IAP DEBUG] Error message:', e.message);
+            console.error('[IAP DEBUG] Product ID:', e.productId);
+
+            const subBtn = document.getElementById('subscribe-btn');
+            if (subBtn) {
+                subBtn.textContent = "Purchase Error";
+                subBtn.disabled = false;
+                setTimeout(() => subBtn.textContent = "Start Free Trial", 3000);
+            }
+            console.error('[IAP DEBUG] Store Error Summary: ' + e.message);
+        });
+
+        // 3. Refresh Store to load products and check entitlements
+        console.log('[IAP DEBUG] Calling store.refresh() to load products from App Store...');
         store.refresh();
+        console.log('[IAP DEBUG] store.refresh() called - waiting for products to load...');
     });
 
-    // Real IAP Handler
+    // Function to unlock premium features
+    function unlockPremiumFeatures(plan) {
+        window.globalUserProfile.subscriptionStatus = 'active';
+        window.globalUserProfile.subscriptionPlan = plan;
+        localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
+
+        // Update Firestore if user is logged in
+        if (window.currentUser && !window.globalUserProfile.isGuest) {
+            window.firebaseHelpers.updateUserSubscription(window.currentUser.uid, {
+                status: 'active',
+                plan: plan,
+                restoredAt: new Date()
+            });
+        }
+    }
+
+    // Function to enable subscribe button when products are loaded
+    function enableSubscribeButton() {
+        const subBtn = document.getElementById('subscribe-btn');
+        if (subBtn) {
+            subBtn.disabled = false;
+            subBtn.style.opacity = '1';
+            subBtn.style.cursor = 'pointer';
+            console.log('[IAP DEBUG] ✅ Subscribe button enabled');
+        }
+    }
+
+    // Function to disable subscribe button when products are not loaded
+    function disableSubscribeButton(reason) {
+        const subBtn = document.getElementById('subscribe-btn');
+        if (subBtn) {
+            subBtn.disabled = true;
+            subBtn.style.opacity = '0.5';
+            subBtn.style.cursor = 'not-allowed';
+            subBtn.title = reason;
+            console.log('[IAP DEBUG] ⚠️ Subscribe button disabled:', reason);
+        }
+    }
+
+    // Function to update subscription prices in UI
+    function updateSubscriptionPrices() {
+        // Update monthly price
+        const monthlyPriceEl = document.querySelector('#plan-monthly .price-amount');
+        if (monthlyPriceEl) {
+            monthlyPriceEl.textContent = monthlyPrice;
+        }
+
+        // Update yearly price
+        const yearlyPriceEl = document.querySelector('#plan-annual .price-amount');
+        if (yearlyPriceEl) {
+            yearlyPriceEl.textContent = yearlyPrice;
+        }
+
+        console.log('Updated subscription prices in UI');
+    }
+
+    // Real IAP Handler with Plan Selection
+    window.handleSubscriptionWithPlan = async function (planType) {
+        console.log('[IAP DEBUG] ========================================');
+        console.log('[IAP DEBUG] handleSubscriptionWithPlan called');
+        console.log('[IAP DEBUG] - Plan Type:', planType);
+        console.log('[IAP DEBUG] - Expected values: "monthly" or "yearly" or "annual"');
+
+        const subBtn = document.getElementById('subscribe-btn');
+        if (!subBtn) {
+            console.error('[IAP DEBUG] ❌ Subscribe button not found!');
+            return;
+        }
+
+        // Determine Product ID based on selected plan
+        // Handle both 'yearly' and 'annual' for compatibility
+        let productId;
+        if (planType === 'monthly') {
+            productId = PRODUCT_ID_MONTHLY;
+        } else if (planType === 'yearly' || planType === 'annual') {
+            productId = PRODUCT_ID_YEARLY;
+        } else {
+            console.error('[IAP DEBUG] ❌ Unknown plan type:', planType);
+            productId = PRODUCT_ID_YEARLY; // Default to yearly
+        }
+
+        console.log('[IAP DEBUG] - Mapped Product ID:', productId);
+        console.log('[IAP DEBUG] - Monthly ID constant:', PRODUCT_ID_MONTHLY);
+        console.log('[IAP DEBUG] - Yearly ID constant:', PRODUCT_ID_YEARLY);
+
+        // CHECK 1: Verify products are loaded
+        console.log('[IAP DEBUG] 🔍 Products loaded?', productsLoaded);
+        console.log('[IAP DEBUG] 🔍 Loaded product IDs:', loadedProductIds);
+        console.log('[IAP DEBUG] 🔍 Products loaded count:', productsLoadedCount, '/ 2');
+
+        if (!productsLoaded) {
+            console.error('[IAP DEBUG] ❌ PRODUCTS NOT LOADED YET!');
+            console.error('[IAP DEBUG] ❌ Cannot start purchase - StoreKit products not fetched');
+            console.error('[IAP DEBUG] ❌ Wait for products to load or check App Store Connect');
+            subBtn.textContent = 'Products Loading...';
+            setTimeout(() => {
+                subBtn.textContent = 'Start Free Trial';
+            }, 2000);
+            return;
+        }
+
+        // Check if plugin is ready
+        if (!window.store) {
+            // FALLBACK TO SIMULATION FOR WEB TESTING
+            console.warn("IAP: Store not found (Web Mode). Using Simulation.");
+            const originalText = subBtn.textContent;
+            subBtn.textContent = "⏳ Simulating Store...";
+            subBtn.disabled = true;
+
+            try {
+                await new Promise(r => setTimeout(r, 1500));
+                if (window.currentUser) {
+                    const expiryDays = planType === 'monthly' ? 30 : 365;
+                    await window.firebaseHelpers.updateUserSubscription(window.currentUser.uid, {
+                        status: 'active',
+                        plan: planType,
+                        productId: productId,
+                        expiry: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
+                        purchasedAt: new Date()
+                    });
+
+                    window.globalUserProfile.subscriptionStatus = 'active';
+                    window.globalUserProfile.subscriptionPlan = planType;
+                    localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
+                }
+                console.log(`${planType} Subscription Successful (Simulated)`);
+                window.closeModal('subscription-modal');
+                renderHome();
+                renderDiscover();
+            } catch (e) {
+                console.error("Sim fail: " + e.message);
+            } finally {
+                subBtn.textContent = originalText;
+                subBtn.disabled = false;
+            }
+            return;
+        }
+
+        // NATIVE IAP FLOW
+        console.log('[IAP DEBUG] Starting native IAP flow...');
+        console.log('[IAP DEBUG] 🔍 Environment check:');
+        console.log('[IAP DEBUG] - Is TestFlight?', window.location.href.includes('testflight') || navigator.userAgent.includes('TestFlight'));
+        console.log('[IAP DEBUG] - Is Sandbox?', window.store.sandbox);
+        console.log('[IAP DEBUG] - User Agent:', navigator.userAgent);
+
+        const originalText = subBtn.textContent;
+        subBtn.textContent = "Contacting App Store...";
+        subBtn.disabled = true;
+
+        try {
+            // CHECK 2: Log all products in store
+            const allProducts = window.store.products;
+            const productCount = allProducts ? Object.keys(allProducts).length : 0;
+            console.log('[IAP DEBUG] 📊 Store has', productCount, 'products');
+            console.log('[IAP DEBUG] 📊 Product IDs in store:', allProducts ? Object.keys(allProducts) : []);
+
+            if (productCount === 0) {
+                console.error('[IAP DEBUG] ❌ CRITICAL: Store has 0 products!');
+                console.error('[IAP DEBUG] ❌ Cannot purchase - no products available');
+                throw new Error('No products available in store');
+            }
+
+            console.log('[IAP DEBUG] Calling store.order() with productId:', productId);
+            console.log('[IAP DEBUG] Store object:', window.store);
+            console.log('[IAP DEBUG] Store products:', window.store.products);
+
+            // Check if product exists in store
+            const product = window.store.get(productId);
+            if (product) {
+                console.log('[IAP DEBUG] ✅ Product found in store:', product);
+                console.log('[IAP DEBUG] - Product state:', product.state);
+                console.log('[IAP DEBUG] - Product canPurchase:', product.canPurchase);
+            } else {
+                console.error('[IAP DEBUG] ❌ Product NOT found in store!');
+                console.error('[IAP DEBUG] Available products:', Object.keys(window.store.products));
+            }
+
+            console.log('[IAP DEBUG] 🚀 Executing store.order()...');
+            store.order(productId);
+            console.log('[IAP DEBUG] ✅ store.order() called successfully (waiting for Apple response)');
+        } catch (error) {
+            console.error('[IAP DEBUG] ❌ Order failed with exception:', error);
+            console.error('[IAP DEBUG] Error message:', error.message);
+            console.error('[IAP DEBUG] Error stack:', error.stack);
+            subBtn.textContent = "Purchase Error";
+            setTimeout(() => {
+                subBtn.textContent = originalText;
+                subBtn.disabled = false;
+            }, 2000);
+        }
+
+        console.log('[IAP DEBUG] ========================================');
+    };
+
+    // Real IAP Handler (legacy - keeping for compatibility)
     async function handleSubscription() {
         const subBtn = document.getElementById('subscribe-btn');
         if (!subBtn) return;
@@ -891,8 +1232,8 @@ function initApp() {
                 glassCard.innerHTML = `
                     <div style="font-size:4rem;margin-bottom:20px;">⚠️</div>
                     <h3 style="color:#fff;margin-bottom:10px;">Load Error</h3>
-                    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">${error.message}</p>
-                    <button class="btn-primary" onclick="window.location.reload()" style="padding:10px 24px;border-radius:12px;">Retry Connection</button>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 8px; text-align: center;">
+                        </p><button class="btn-primary" onclick="window.location.reload()" style="padding:10px 24px;border-radius:12px;">Retry Connection</button>
                 `;
             } else if (splash) {
                 splash.remove();
@@ -938,7 +1279,7 @@ function initApp() {
                 <div style="background:var(--bg-card);border-radius:24px;padding:32px;text-align:center;margin:20px 0;border:1px solid var(--border-color);box-shadow:0 12px 40px rgba(0,0,0,0.3);">
                     <div style="font-size:3.5rem;margin-bottom:16px;">⌛</div>
                     <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:8px;color:var(--text-primary);">Trial Expired</h2>
-                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$8.50/month</strong> to continue listening to your library.</p>
+                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$3.99/month</strong> to continue listening to your library.</p>
                     <button class="btn-primary" style="width:100%;padding:14px;border-radius:16px;font-weight:700;">Subscribe Now</button>
                     <p style="margin-top:16px;font-size:0.8rem;color:var(--text-secondary);opacity:0.6;">Cancel anytime • Ad-free experience</p>
                 </div>
@@ -994,7 +1335,7 @@ function initApp() {
         if (!container) return;
 
         container.innerHTML = booksToRender.map(book => `
-            <div class="book-card" onclick="openReader('${book.id}')">
+            <div class="book-card" onclick="openPlayer('${book.id}')">
                 <img src="${book.coverUrl || 'placeholder.svg'}" alt="${book.title}" class="book-cover" onerror="this.src='placeholder.svg'">
                 <div class="book-title">${book.title}</div>
                 <div class="book-author">${book.author}</div>
@@ -1013,7 +1354,7 @@ function initApp() {
                 <div style="background:var(--bg-card);border-radius:24px;padding:32px;text-align:center;margin:20px 0;border:1px solid var(--border-color);box-shadow:0 12px 40px rgba(0,0,0,0.3);">
                     <div style="font-size:3.5rem;margin-bottom:16px;">⌛</div>
                     <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:8px;color:var(--text-primary);">Trial Expired</h2>
-                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$8.50/month</strong> to continue listening to your library.</p>
+                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$3.99/month</strong> to continue listening to your library.</p>
                     <button class="btn-primary" style="width:100%;padding:14px;border-radius:16px;font-weight:700;" onclick="window.openSubscriptionModal()">Subscribe Now</button>
                     <p style="margin-top:16px;font-size:0.8rem;color:var(--text-secondary);opacity:0.6;">Cancel anytime • Ad-free experience</p>
                 </div>
@@ -1063,6 +1404,10 @@ function initApp() {
     }
 
     async function renderLibrary() {
+        console.log("📚 renderLibrary: Starting...");
+        console.log("📚 Current user:", window.currentUser?.uid);
+        console.log("📚 User profile library:", userProfile.library);
+
         mainContent.innerHTML = `
             <div class="section-header"><div class="section-header-title">My Library</div></div>
             <div id="library-container" style="min-height: 200px; display: flex; justify-content: center; align-items: center;">
@@ -1130,6 +1475,9 @@ function initApp() {
             }
 
             const libraryBooks = books.filter(b => libraryIds.includes(b.id));
+            console.log("📚 Library IDs found:", libraryIds);
+            console.log("📚 Total books available:", books.length);
+            console.log("📚 Filtered library books:", libraryBooks.length);
 
             // Re-use container for grid
             const container = document.getElementById('library-container');
@@ -1170,99 +1518,68 @@ function initApp() {
         const settingsBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="settings-btn">⚙️ Settings</button>`;
         const supportBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="contact-support-btn">💬 Contact Support</button>`;
 
+        const isSubscribed = userProfile.subscriptionStatus === 'active';
+        const trialDaysLeft = window.getTrialDaysRemaining();
+        const showTrialBadge = !userProfile.isGuest && !isSubscribed && trialDaysLeft > 0;
+        const showUpgradeBtn = !userProfile.isGuest && !isSubscribed;
+
+        const trialHtml = showTrialBadge ? `
+            <div class="trial-counter-card">
+                <div class="trial-counter-info">
+                    <span class="trial-counter-label">FREE TRIAL</span>
+                    <span class="trial-counter-value">${trialDaysLeft} Days Remaining</span>
+                </div>
+                <div class="trial-progress-bar">
+                    <div class="trial-progress-fill" style="width: ${(trialDaysLeft / 14) * 100}%"></div>
+                </div>
+            </div>
+        ` : '';
+
+        const membershipStatusHtml = isSubscribed
+            ? `<div class="membership-badge premium"><span>⭐</span> Premium Member</div>`
+            : (userProfile.isGuest ? '' : `<div class="membership-badge trial"><span>🎁</span> Free Trial</div>`);
+
+        const upgradeBtnHtml = showUpgradeBtn
+            ? `<button class="btn-primary upgrade-btn" style="width:100%; margin-top: 12px; margin-bottom: 16px; background: linear-gradient(135.47deg, #F59E0B 0%, #D97706 100%);" id="upgrade-membership-btn">⭐ Upgrade to Premium</button>`
+            : '';
+
         mainContent.innerHTML = `
             <div class="profile-header">
-            <div class="profile-avatar-container">
-                ${avatarHtml}
-            </div>
-            <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:4px;color:var(--text-primary);">${userProfile.name}</h2>
-            <p style="color:var(--text-secondary);margin-bottom:16px;">${userProfile.email}</p>
-            <div class="profile-bio">${userProfile.bio || 'No bio yet.'}</div>
-            
-            <div class="profile-stats">
-                <div class="stat-item">
-                    <span class="stat-value">${stats.weekMinutes}</span>
-                    <span class="stat-label">Min Read</span>
+                ${membershipStatusHtml}
+                <div class="profile-avatar-container">
+                    ${avatarHtml}
                 </div>
-                <div class="stat-item">
-                    <span class="stat-value">${stats.completedBooks}</span>
-                    <span class="stat-label">Books</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">${stats.streak}</span>
-                    <span class="stat-label">Streak</span>
+                <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:4px;color:var(--text-primary);">${userProfile.name}</h2>
+                <p style="color:var(--text-secondary);margin-bottom:16px;">${userProfile.email}</p>
+                <div class="profile-bio">${userProfile.bio || 'No bio yet.'}</div>
+                
+                ${trialHtml}
+
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">${stats.weekMinutes}</span>
+                        <span class="stat-label">Min Read</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">${stats.completedBooks}</span>
+                        <span class="stat-label">Books</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">${stats.streak}</span>
+                        <span class="stat-label">Streak</span>
+                    </div>
                 </div>
             </div>
+
+            <div class="profile-menu">
+                <div class="section-header"><div class="section-header-title">Account Settings</div></div>
+                ${upgradeBtnHtml}
+                ${userProfile.isGuest ? '' : editBtnHtml}
+                ${loginBtnHtml}
+                ${settingsBtnHtml}
+                ${supportBtnHtml}
             </div>
-            
-            <!-- Subscription Info Block -->
-            ${(() => {
-                let statusHtml = '';
-                const isGuest = userProfile.isGuest;
-                const isSubscribed = userProfile.subscriptionStatus === 'active';
-
-                // Calculate Trial Days
-                let trialDaysLeft = 0;
-                if (!isGuest && userProfile.trialStartDate) {
-                    const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
-                    const now = new Date();
-                    const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
-                    trialDaysLeft = Math.max(0, 14 - diffDays);
-                }
-
-                if (isSubscribed) {
-                    statusHtml = `
-                        <div style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);padding:16px;border-radius:16px;margin-bottom:16px;color:white;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 20px rgba(16,185,129,0.3);">
-                            <div>
-                                <div style="font-weight:700;font-size:1.1rem;">Premium Active</div>
-                                <div style="font-size:0.85rem;opacity:0.9;">Unlimited Access</div>
-                            </div>
-                            <div style="font-size:2rem;">✨</div>
-                        </div>
-                    `;
-                } else if (!isGuest) {
-                    // Trial or Expired
-                    if (trialDaysLeft > 0) {
-                        statusHtml = `
-                            <div style="background:var(--bg-card);padding:16px;border-radius:16px;margin-bottom:16px;border:1px solid var(--accent-primary);display:flex;align-items:center;justify-content:space-between;">
-                                <div>
-                                    <div style="font-weight:700;color:var(--accent-primary);font-size:1.1rem;">Free Trial Active</div>
-                                    <div style="font-size:0.85rem;color:var(--text-secondary);">${trialDaysLeft} days remaining</div>
-                                </div>
-                                <button onclick="window.openSubscriptionModal()" style="background:var(--accent-primary);color:white;border:none;padding:8px 16px;border-radius:20px;font-weight:600;font-size:0.9rem;cursor:pointer;">Upgrade</button>
-                            </div>
-                        `;
-                    } else {
-                        statusHtml = `
-                            <div style="background:var(--bg-card);padding:16px;border-radius:16px;margin-bottom:16px;border:1px solid #ef4444;display:flex;align-items:center;justify-content:space-between;">
-                                <div>
-                                    <div style="font-weight:700;color:#ef4444;font-size:1.1rem;">Trial Expired</div>
-                                    <div style="font-size:0.85rem;color:var(--text-secondary);">Unlock full access</div>
-                                </div>
-                                <button onclick="window.openSubscriptionModal()" style="background:#ef4444;color:white;border:none;padding:8px 16px;border-radius:20px;font-weight:600;font-size:0.9rem;cursor:pointer;">Subscribe</button>
-                            </div>
-                        `;
-                    }
-                } else {
-                    // Guest
-                    statusHtml = `
-                        <div style="background:var(--bg-card);padding:16px;border-radius:16px;margin-bottom:16px;border:1px dashed var(--text-secondary);text-align:center;">
-                            <div style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Log in to save your progress and start your free trial.</div>
-                        </div>
-                    `;
-                }
-                return statusHtml;
-            })()}
-        </div>
-
-        <div class="profile-menu">
-            <div class="section-header"><div class="section-header-title">Account Settings</div></div>
-            ${userProfile.isGuest ? '' : editBtnHtml}
-            ${loginBtnHtml}
-            ${settingsBtnHtml}
-            ${supportBtnHtml}
-        </div>
-    `;
+        `;
 
         // Attach Event Listeners
         const editBtn = document.getElementById('edit-profile-btn');
@@ -1279,6 +1596,9 @@ function initApp() {
         if (supportBtn) supportBtn.addEventListener('click', () => window.openSupportModal());
 
         if (loginBtn) loginBtn.addEventListener('click', () => window.showModal('login-modal'));
+
+        const upgradeBtn = document.getElementById('upgrade-membership-btn');
+        if (upgradeBtn) upgradeBtn.addEventListener('click', () => window.openSubscriptionModal());
     }
 
 
@@ -1585,15 +1905,91 @@ function initApp() {
         const price = book.price || 0;
         document.getElementById('modal-price').textContent = `$${price.toFixed(2)} `;
         document.getElementById('modal-description').innerHTML = book.description || "No description available.";
+
         const readBtn = document.getElementById('modal-read-btn');
         readBtn.onclick = (e) => {
             e.preventDefault();
             currentlyReading = { bookId: book.id, progress: 0, chapter: 1, totalChapters: 20 };
             saveProgress();
-            openReader(book);
+            openReader(book.id); // Passing ID for consistency
         };
+
+        const libraryBtn = document.getElementById('modal-library-btn');
+        if (libraryBtn) {
+            // Check if already in library
+            const isSaved = userProfile.library && userProfile.library.includes(book.id);
+            console.log("LibraryBtn: Check saved state for", book.id, "isSaved:", isSaved, "Library:", userProfile.library);
+            libraryBtn.textContent = isSaved ? 'In Library' : 'Add to Library';
+            libraryBtn.disabled = isSaved;
+
+            libraryBtn.onclick = async (e) => {
+                e.preventDefault();
+                if (!window.currentUser || userProfile.isGuest) {
+                    alert("Please sign in to save books!");
+                    window.openLoginModal(true);
+                    return;
+                }
+
+                console.log("LibraryBtn: Clicked for book", book.id);
+                libraryBtn.textContent = 'Saving...';
+                libraryBtn.disabled = true;
+
+                try {
+                    if (!userProfile.library) {
+                        console.log("LibraryBtn: Initializing userProfile.library array");
+                        userProfile.library = [];
+                    }
+                    if (!userProfile.library.includes(book.id)) {
+                        userProfile.library.push(book.id);
+
+                        // Save to Firestore with error handling
+                        console.log("LibraryBtn: Saving to Firestore...");
+                        await window.firebaseHelpers.updateUserProfile(window.currentUser.uid, {
+                            library: userProfile.library
+                        });
+
+                        // Verify it was saved
+                        console.log("LibraryBtn: Verifying save...");
+                        const verifyDoc = await window.firebaseFirestore
+                            .collection('users')
+                            .doc(window.currentUser.uid)
+                            .get();
+
+                        if (verifyDoc.exists && verifyDoc.data().library?.includes(book.id)) {
+                            console.log("✅ Library: Book successfully saved to Firestore:", book.id);
+                            libraryBtn.textContent = 'In Library ✓';
+                            libraryBtn.disabled = true;
+
+                            // Force refresh library view if active
+                            const activeTab = document.querySelector('.nav-btn.active')?.getAttribute('data-target');
+                            if (activeTab === 'library') {
+                                console.log("Library: Refreshing library view...");
+                                await renderLibrary();
+                            }
+                        } else {
+                            throw new Error("Verification failed - book not found in Firestore after save");
+                        }
+                    } else {
+                        console.log("Library: Book already in library, no action needed.");
+                        libraryBtn.textContent = 'In Library';
+                        libraryBtn.disabled = true;
+                    }
+                } catch (err) {
+                    console.error("❌ Error adding to library:", err);
+                    alert(`Failed to save book: ${err.message}`);
+                    libraryBtn.textContent = 'Add to Library';
+                    libraryBtn.disabled = false;
+                }
+            };
+        }
+
         modal.style.display = 'flex';
     }
+
+    window.openModalById = (id) => {
+        const book = books.find(b => b.id === id);
+        if (book) openModal(book);
+    };
 
     closeBtn.addEventListener('click', () => {
         modal.style.display = 'none';
@@ -1673,14 +2069,6 @@ if (document.readyState === 'loading') {
 }
 
 // Modal Helper Functions (must be outside DOMContentLoaded so they're always available)
-window.showModal = function (modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.style.alignItems = 'flex-end'; // Match CSS modal class
-    }
-};
-
 window.showModal = function (modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
