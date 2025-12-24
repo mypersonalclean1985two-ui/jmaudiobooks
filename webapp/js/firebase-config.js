@@ -325,19 +325,28 @@ window.firebaseHelpers = {
     },
     updateUserProfile: async (userId, profileData) => {
         try {
+            console.log("Firebase: Updating user profile for:", userId, profileData);
             const user = auth.currentUser;
-            if (user) {
-                await user.updateProfile({
-                    displayName: profileData.name,
-                    photoURL: profileData.image
-                });
+
+            // Local fallback for Auth profile (only if we have name/image)
+            const name = profileData.name || profileData.displayName;
+            const image = profileData.image || profileData.photoURL;
+
+            if (user && (name || image)) {
+                const authUpdates = {};
+                if (name) authUpdates.displayName = name;
+                if (image) authUpdates.photoURL = image;
+                await user.updateProfile(authUpdates);
+                console.log("Firebase: Auth Profile updated.");
             }
+
+            // Sync all data to Firestore
             await db.collection('users').doc(userId).set({
-                displayName: profileData.name,
-                photoURL: profileData.image,
-                email: profileData.email, // Keep email in sync
+                ...profileData,
                 lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
+
+            console.log("Firebase: Firestore Profile updated successfully.");
         } catch (error) {
             console.error('Error updating user profile:', error);
             throw error;

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>JM Audiobooks - Audio Player</title>
-    <link rel="stylesheet" href="css/style.css?v=7.0">
+    <link rel="stylesheet" href="css/style.css?v=8.0">
     <link rel="stylesheet" href="css/auth.css?v=1.0">
     <link rel="stylesheet" href="css/support.css?v=1.0">
     <link rel="manifest" href="manifest.json">
@@ -121,7 +121,7 @@
                     <p class="price-tag" id="modal-price">$0.00</p>
                     <div class="modal-actions">
                         <button class="btn-primary" id="modal-read-btn">Listen Now</button>
-                        <button class="btn-secondary">Add to Library</button>
+                        <button class="btn-secondary" id="modal-library-btn">Add to Library</button>
                     </div>
                     <div class="modal-desc">
                         <h3 style="color: var(--text-primary);">About</h3>
@@ -325,14 +325,43 @@
                 <p style="color: var(--text-secondary); line-height: 1.5;">Get unlimited access to thousands of premium
                     audiobooks.</p>
             </div>
-            <div
-                style="background: var(--bg-secondary); border-radius: 16px; padding: 24px; margin-bottom: 24px; border: 2px solid var(--accent-primary); position: relative; overflow: hidden;">
+
+            <!-- Annual Plan (Best Value) -->
+            <div class="subscription-plan-card" data-plan="annual" id="plan-annual"
+                style="background: var(--bg-secondary); border-radius: 16px; padding: 24px; margin-bottom: 16px; border: 2px solid var(--accent-primary); position: relative; overflow: hidden; cursor: pointer; transition: all 0.3s ease;">
                 <div
                     style="position: absolute; top: 0; right: 0; background: var(--accent-primary); color: white; font-size: 0.7rem; padding: 4px 12px; border-radius: 0 0 0 12px; font-weight: bold;">
                     BEST VALUE</div>
+                <div class="plan-checkmark"
+                    style="position: absolute; top: 12px; left: 12px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                    ✓</div>
+                <h3 style="font-size: 1.2rem; margin-bottom: 8px;">Premium Annual</h3>
+                <div style="font-size: 2.5rem; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;">
+                    $25<span style="font-size: 1rem; color: var(--text-secondary); font-weight: normal;">/year</span>
+                </div>
+                <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 12px;">Save 40% • Just
+                    $2.08/month</div>
+                <div
+                    style="color: var(--accent-primary); font-weight: 600; margin-bottom: 16px; font-size: 0.9rem; padding: 4px 8px; background: rgba(99, 102, 241, 0.1); display: inline-block; border-radius: 6px;">
+                    14-Day Free Trial</div>
+                <ul
+                    style="text-align: left; list-style: none; padding: 0; margin: 0; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.8;">
+                    <li>✅ Unlimited Listening</li>
+                    <li>✅ High Quality Audio</li>
+                    <li>✅ Offline Support</li>
+                    <li>✅ Cancel Anytime</li>
+                </ul>
+            </div>
+
+            <!-- Monthly Plan -->
+            <div class="subscription-plan-card" data-plan="monthly" id="plan-monthly"
+                style="background: var(--bg-secondary); border-radius: 16px; padding: 24px; margin-bottom: 24px; border: 1px solid var(--border-color); position: relative; cursor: pointer; transition: all 0.3s ease;">
+                <div class="plan-checkmark"
+                    style="position: absolute; top: 12px; left: 12px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border-color); display: none; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                </div>
                 <h3 style="font-size: 1.2rem; margin-bottom: 8px;">Premium Monthly</h3>
                 <div style="font-size: 2.5rem; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;">
-                    $8.50<span style="font-size: 1rem; color: var(--text-secondary); font-weight: normal;">/mo</span>
+                    $3.50<span style="font-size: 1rem; color: var(--text-secondary); font-weight: normal;">/mo</span>
                 </div>
                 <div
                     style="color: var(--accent-primary); font-weight: 600; margin-bottom: 16px; font-size: 0.9rem; padding: 4px 8px; background: rgba(99, 102, 241, 0.1); display: inline-block; border-radius: 6px;">
@@ -345,16 +374,123 @@
                     <li>✅ Cancel Anytime</li>
                 </ul>
             </div>
+
             <button class="btn-primary" id="subscribe-btn"
                 style="width: 100%; padding: 16px; font-size: 1.1rem; font-weight: bold; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); margin-bottom: 12px;">Start
                 Free Trial</button>
             <button class="btn-secondary" id="restore-btn"
                 style="width: 100%; color: var(--text-secondary); font-size: 0.9rem;">Restore Purchases</button>
             <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 16px;">
-                Plan auto-renews for $3.50/month after trial.
+                Plan auto-renews after trial. Cancel anytime.
             </p>
         </div>
     </div>
+
+    <script>
+        // Subscription Plan Selection
+        let selectedPlan = 'annual'; // Default to annual (best value)
+
+        function selectPlan(planType) {
+            selectedPlan = planType;
+            const annualCard = document.getElementById('plan-annual');
+            const monthlyCard = document.getElementById('plan-monthly');
+            const annualCheck = annualCard.querySelector('.plan-checkmark');
+            const monthlyCheck = monthlyCard.querySelector('.plan-checkmark');
+
+            // Reset both cards
+            annualCard.style.border = '2px solid var(--accent-primary)';
+            monthlyCard.style.border = '1px solid var(--border-color)';
+            annualCheck.style.display = 'none';
+            monthlyCheck.style.display = 'none';
+
+            // Highlight selected card
+            if (planType === 'annual') {
+                annualCard.style.border = '2px solid var(--accent-primary)';
+                annualCard.style.boxShadow = '0 8px 24px rgba(99, 102, 241, 0.3)';
+                annualCheck.style.display = 'flex';
+                monthlyCard.style.boxShadow = 'none';
+            } else {
+                monthlyCard.style.border = '2px solid var(--accent-primary)';
+                monthlyCard.style.boxShadow = '0 8px 24px rgba(99, 102, 241, 0.3)';
+                monthlyCheck.style.display = 'flex';
+                monthlyCheck.style.background = 'var(--accent-primary)';
+                monthlyCheck.innerHTML = '✓';
+                annualCard.style.boxShadow = 'none';
+            }
+
+            console.log('Selected plan:', planType);
+        }
+
+        // Add click handlers when DOM is ready
+        document.addEventListener('DOMContentLoaded', function () {
+            const annualCard = document.getElementById('plan-annual');
+            const monthlyCard = document.getElementById('plan-monthly');
+
+            if (annualCard) {
+                annualCard.addEventListener('click', () => selectPlan('annual'));
+            }
+            if (monthlyCard) {
+                monthlyCard.addEventListener('click', () => selectPlan('monthly'));
+            }
+
+            // Initialize with annual selected
+            selectPlan('annual');
+
+            // Subscribe button handler
+            const subscribeBtn = document.getElementById('subscribe-btn');
+            if (subscribeBtn) {
+                subscribeBtn.addEventListener('click', function () {
+                    console.log('Starting subscription for plan:', selectedPlan);
+
+                    // Check if running in Capacitor (iOS/Android)
+                    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) {
+                        // iOS/Android In-App Purchase
+                        const productId = selectedPlan === 'annual' ? 'premium_annual' : 'premium_monthly';
+                        console.log('Initiating iOS/Android purchase for:', productId);
+
+                        window.Capacitor.Plugins.Purchases.purchaseProduct({ productIdentifier: productId })
+                            .then(result => {
+                                console.log('Purchase successful:', result);
+                                alert('Subscription activated! Enjoy unlimited audiobooks.');
+                                document.getElementById('subscription-modal').style.display = 'none';
+                            })
+                            .catch(error => {
+                                console.error('Purchase failed:', error);
+                                if (error.code !== 'USER_CANCELLED') {
+                                    alert('Purchase failed. Please try again.');
+                                }
+                            });
+                    } else {
+                        // Web fallback - show message
+                        console.log('Web environment - showing subscription info');
+                        alert(`Starting ${selectedPlan} subscription trial!\n\nPrice: ${selectedPlan === 'annual' ? '$25/year' : '$3.50/month'}\n14-day free trial included.`);
+                        document.getElementById('subscription-modal').style.display = 'none';
+                    }
+                });
+            }
+
+            // Restore purchases button
+            const restoreBtn = document.getElementById('restore-btn');
+            if (restoreBtn) {
+                restoreBtn.addEventListener('click', function () {
+                    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) {
+                        console.log('Restoring purchases...');
+                        window.Capacitor.Plugins.Purchases.restorePurchases()
+                            .then(result => {
+                                console.log('Restore successful:', result);
+                                alert('Purchases restored successfully!');
+                            })
+                            .catch(error => {
+                                console.error('Restore failed:', error);
+                                alert('No purchases found to restore.');
+                            });
+                    } else {
+                        alert('Restore purchases is only available in the mobile app.');
+                    }
+                });
+            }
+        });
+    </script>
     <!-- About App Modal -->
     <div class="modal" id="about-modal">
         <div class="modal-content" style="height: auto; border-radius: 24px; padding: 24px; text-align: center;">
@@ -396,7 +532,7 @@
     </div>
 
     <!-- Main Application Logic -->
-    <script src="js/app.js?v=15.0"></script>
+    <script src="js/app.js?v=21.0"></script>
 
     <script>
         if ('serviceWorker' in navigator) {

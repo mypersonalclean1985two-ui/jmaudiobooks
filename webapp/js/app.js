@@ -105,6 +105,7 @@ function initApp() {
         // PERMISSIVE DEFAULTS: Don't block during sync or for guests who see "locked" content separately
         if (!window.authInitialized) return true;
         if (!window.currentUser || userProfile.isGuest) return true;
+        if (userProfile.subscriptionStatus === 'active') return true; // Subscribed users are always active
         if (!userProfile.trialStartDate) return true;
 
         const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
@@ -112,6 +113,19 @@ function initApp() {
         const diffDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
 
         return diffDays <= 14; // 14-day rule
+    };
+
+    window.getTrialDaysRemaining = () => {
+        if (!window.currentUser || userProfile.isGuest || !userProfile.trialStartDate) return 0;
+        if (userProfile.subscriptionStatus === 'active') return 0;
+
+        const start = userProfile.trialStartDate.toDate ? userProfile.trialStartDate.toDate() : new Date(userProfile.trialStartDate);
+        const now = new Date();
+        const diffMs = now - start;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const remaining = 14 - diffDays;
+
+        return remaining > 0 ? remaining : 0;
     };
 
     // Auth State Listener
@@ -149,7 +163,6 @@ function initApp() {
 
                 if (firestoreProfile) {
                     console.log("App: Found Firestore profile:", firestoreProfile);
-                    // Only overwrite if Firestore has valid data (not empty strings)
                     if (firestoreProfile.displayName && firestoreProfile.displayName.trim() !== '') {
                         userProfile.name = firestoreProfile.displayName;
                     }
@@ -162,22 +175,23 @@ function initApp() {
                     if (firestoreProfile.trialStartDate) {
                         userProfile.trialStartDate = firestoreProfile.trialStartDate;
                     }
+                    if (firestoreProfile.library) {
+                        userProfile.library = firestoreProfile.library;
+                        console.log("App: Synced library from Firestore:", userProfile.library.length, "items");
+                    }
                 } else {
                     // No Firestore profile? Check if we should migrate Guest Data
                     console.log("App: No Firestore profile found. Checking for guest migration...");
-                    let updates = {};
+                    let updates = { trialStartDate: new Date() };
+                    userProfile.trialStartDate = updates.trialStartDate;
 
-                    // If we migrated from Guest with a custom name, use that. 
-                    // OTHERWISE, keep the Google Name (don't overwrite with 'User')
                     if (previousGuestName) {
                         userProfile.name = previousGuestName;
                         updates.displayName = previousGuestName;
                     } else if (!userProfile.name) {
-                        // If Auth didn't have a name either, fallback
                         userProfile.name = 'Book Lover';
                         updates.displayName = 'Book Lover';
                     } else {
-                        // Use the Auth name (Google Name) for the initial Firestore save
                         updates.displayName = userProfile.name;
                     }
 
@@ -189,7 +203,6 @@ function initApp() {
                         updates.photoURL = userProfile.image;
                     }
 
-                    // Save this initial state to Firestore so it persists
                     await window.firebaseHelpers.updateUserProfile(user.uid, {
                         ...updates,
                         email: userProfile.email
@@ -925,7 +938,7 @@ function initApp() {
                 <div style="background:var(--bg-card);border-radius:24px;padding:32px;text-align:center;margin:20px 0;border:1px solid var(--border-color);box-shadow:0 12px 40px rgba(0,0,0,0.3);">
                     <div style="font-size:3.5rem;margin-bottom:16px;">⌛</div>
                     <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:8px;color:var(--text-primary);">Trial Expired</h2>
-                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$8.50/month</strong> to continue listening to your library.</p>
+                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$3.50/month</strong> to continue listening to your library.</p>
                     <button class="btn-primary" style="width:100%;padding:14px;border-radius:16px;font-weight:700;">Subscribe Now</button>
                     <p style="margin-top:16px;font-size:0.8rem;color:var(--text-secondary);opacity:0.6;">Cancel anytime • Ad-free experience</p>
                 </div>
@@ -981,7 +994,7 @@ function initApp() {
         if (!container) return;
 
         container.innerHTML = booksToRender.map(book => `
-            <div class="book-card" onclick="openReader('${book.id}')">
+            <div class="book-card" onclick="openPlayer('${book.id}')">
                 <img src="${book.coverUrl || 'placeholder.svg'}" alt="${book.title}" class="book-cover" onerror="this.src='placeholder.svg'">
                 <div class="book-title">${book.title}</div>
                 <div class="book-author">${book.author}</div>
@@ -1000,7 +1013,7 @@ function initApp() {
                 <div style="background:var(--bg-card);border-radius:24px;padding:32px;text-align:center;margin:20px 0;border:1px solid var(--border-color);box-shadow:0 12px 40px rgba(0,0,0,0.3);">
                     <div style="font-size:3.5rem;margin-bottom:16px;">⌛</div>
                     <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:8px;color:var(--text-primary);">Trial Expired</h2>
-                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$8.50/month</strong> to continue listening to your library.</p>
+                    <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:24px;line-height:1.5;">Your 14-day free trial has ended. Subscribe for just <strong>$3.50/month</strong> to continue listening to your library.</p>
                     <button class="btn-primary" style="width:100%;padding:14px;border-radius:16px;font-weight:700;" onclick="window.openSubscriptionModal()">Subscribe Now</button>
                     <p style="margin-top:16px;font-size:0.8rem;color:var(--text-secondary);opacity:0.6;">Cancel anytime • Ad-free experience</p>
                 </div>
@@ -1157,39 +1170,68 @@ function initApp() {
         const settingsBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="settings-btn">⚙️ Settings</button>`;
         const supportBtnHtml = `<button class="btn-secondary" style="width:100%; margin-top: 12px;" id="contact-support-btn">💬 Contact Support</button>`;
 
+        const isSubscribed = userProfile.subscriptionStatus === 'active';
+        const trialDaysLeft = window.getTrialDaysRemaining();
+        const showTrialBadge = !userProfile.isGuest && !isSubscribed && trialDaysLeft > 0;
+        const showUpgradeBtn = !userProfile.isGuest && !isSubscribed;
+
+        const trialHtml = showTrialBadge ? `
+            <div class="trial-counter-card">
+                <div class="trial-counter-info">
+                    <span class="trial-counter-label">FREE TRIAL</span>
+                    <span class="trial-counter-value">${trialDaysLeft} Days Remaining</span>
+                </div>
+                <div class="trial-progress-bar">
+                    <div class="trial-progress-fill" style="width: ${(trialDaysLeft / 14) * 100}%"></div>
+                </div>
+            </div>
+        ` : '';
+
+        const membershipStatusHtml = isSubscribed
+            ? `<div class="membership-badge premium"><span>⭐</span> Premium Member</div>`
+            : (userProfile.isGuest ? '' : `<div class="membership-badge trial"><span>🎁</span> Free Trial</div>`);
+
+        const upgradeBtnHtml = showUpgradeBtn
+            ? `<button class="btn-primary upgrade-btn" style="width:100%; margin-top: 12px; background: linear-gradient(135.47deg, #F59E0B 0%, #D97706 100%);" id="upgrade-membership-btn">⭐ Upgrade to Premium</button>`
+            : '';
+
         mainContent.innerHTML = `
             <div class="profile-header">
-            <div class="profile-avatar-container">
-                ${avatarHtml}
-            </div>
-            <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:4px;color:var(--text-primary);">${userProfile.name}</h2>
-            <p style="color:var(--text-secondary);margin-bottom:16px;">${userProfile.email}</p>
-            <div class="profile-bio">${userProfile.bio || 'No bio yet.'}</div>
-            
-            <div class="profile-stats">
-                <div class="stat-item">
-                    <span class="stat-value">${stats.weekMinutes}</span>
-                    <span class="stat-label">Min Read</span>
+                ${membershipStatusHtml}
+                <div class="profile-avatar-container">
+                    ${avatarHtml}
                 </div>
-                <div class="stat-item">
-                    <span class="stat-value">${stats.completedBooks}</span>
-                    <span class="stat-label">Books</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">${stats.streak}</span>
-                    <span class="stat-label">Streak</span>
-                </div>
-            </div>
-        </div>
+                <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:4px;color:var(--text-primary);">${userProfile.name}</h2>
+                <p style="color:var(--text-secondary);margin-bottom:16px;">${userProfile.email}</p>
+                <div class="profile-bio">${userProfile.bio || 'No bio yet.'}</div>
+                
+                ${trialHtml}
 
-        <div class="profile-menu">
-            <div class="section-header"><div class="section-header-title">Account Settings</div></div>
-            ${userProfile.isGuest ? '' : editBtnHtml}
-            ${loginBtnHtml}
-            ${settingsBtnHtml}
-            ${supportBtnHtml}
-        </div>
-    `;
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">${stats.weekMinutes}</span>
+                        <span class="stat-label">Min Read</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">${stats.completedBooks}</span>
+                        <span class="stat-label">Books</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">${stats.streak}</span>
+                        <span class="stat-label">Streak</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-menu">
+                <div class="section-header"><div class="section-header-title">Account Settings</div></div>
+                ${upgradeBtnHtml}
+                ${userProfile.isGuest ? '' : editBtnHtml}
+                ${loginBtnHtml}
+                ${settingsBtnHtml}
+                ${supportBtnHtml}
+            </div>
+        `;
 
         // Attach Event Listeners
         const editBtn = document.getElementById('edit-profile-btn');
@@ -1206,6 +1248,9 @@ function initApp() {
         if (supportBtn) supportBtn.addEventListener('click', () => window.openSupportModal());
 
         if (loginBtn) loginBtn.addEventListener('click', () => window.showModal('login-modal'));
+
+        const upgradeBtn = document.getElementById('upgrade-membership-btn');
+        if (upgradeBtn) upgradeBtn.addEventListener('click', () => window.openSubscriptionModal());
     }
 
 
@@ -1512,15 +1557,69 @@ function initApp() {
         const price = book.price || 0;
         document.getElementById('modal-price').textContent = `$${price.toFixed(2)} `;
         document.getElementById('modal-description').innerHTML = book.description || "No description available.";
+
         const readBtn = document.getElementById('modal-read-btn');
         readBtn.onclick = (e) => {
             e.preventDefault();
             currentlyReading = { bookId: book.id, progress: 0, chapter: 1, totalChapters: 20 };
             saveProgress();
-            openReader(book);
+            openReader(book.id); // Passing ID for consistency
         };
+
+        const libraryBtn = document.getElementById('modal-library-btn');
+        if (libraryBtn) {
+            // Check if already in library
+            const isSaved = userProfile.library && userProfile.library.includes(book.id);
+            console.log("LibraryBtn: Check saved state for", book.id, "isSaved:", isSaved, "Library:", userProfile.library);
+            libraryBtn.textContent = isSaved ? 'In Library' : 'Add to Library';
+            libraryBtn.disabled = isSaved;
+
+            libraryBtn.onclick = async (e) => {
+                e.preventDefault();
+                if (!window.currentUser || userProfile.isGuest) {
+                    alert("Please sign in to save books!");
+                    window.openLoginModal(true);
+                    return;
+                }
+
+                console.log("LibraryBtn: Clicked for book", book.id);
+                libraryBtn.textContent = 'Saving...';
+                try {
+                    if (!userProfile.library) {
+                        console.log("LibraryBtn: Initializing userProfile.library array");
+                        userProfile.library = [];
+                    }
+                    if (!userProfile.library.includes(book.id)) {
+                        userProfile.library.push(book.id);
+                        await window.firebaseHelpers.updateUserProfile(window.currentUser.uid, {
+                            library: userProfile.library
+                        });
+                        console.log("Library: Book added to user's library in Firestore:", book.id);
+                        libraryBtn.textContent = 'In Library';
+                        libraryBtn.disabled = true;
+                        // Optional: Refresh library view if active
+                        if (document.querySelector('.nav-btn.active')?.getAttribute('data-target') === 'library') {
+                            renderLibrary();
+                        }
+                    } else {
+                        console.log("Library: Book already in library, no action needed.");
+                        libraryBtn.textContent = 'In Library';
+                        libraryBtn.disabled = true;
+                    }
+                } catch (err) {
+                    console.error("Error adding to library:", err);
+                    libraryBtn.textContent = 'Error';
+                }
+            };
+        }
+
         modal.style.display = 'flex';
     }
+
+    window.openModalById = (id) => {
+        const book = books.find(b => b.id === id);
+        if (book) openModal(book);
+    };
 
     closeBtn.addEventListener('click', () => {
         modal.style.display = 'none';
