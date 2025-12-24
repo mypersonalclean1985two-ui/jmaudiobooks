@@ -294,11 +294,7 @@ function initApp() {
                         <input type="email" id="login-email" class="auth-input" placeholder="you@example.com">
                     </div>
                     
-                    <!-- Password Field with Toggle -->
                     <div>
-                        <p id="splash-status"
-                        style="color:rgba(255,255,255,0.7);font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;animation: statusFade 1.5s infinite;">
-                        Initializing...</p>
                         <div class="password-field-wrapper">
                             <input type="password" id="login-password" class="auth-input" placeholder="••••••••">
                             <button type="button" class="password-toggle-btn" id="toggle-password">👁️</button>
@@ -891,8 +887,8 @@ function initApp() {
                 glassCard.innerHTML = `
                     <div style="font-size:4rem;margin-bottom:20px;">⚠️</div>
                     <h3 style="color:#fff;margin-bottom:10px;">Load Error</h3>
-                    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">${error.message}</p>
-                    <button class="btn-primary" onclick="window.location.reload()" style="padding:10px 24px;border-radius:12px;">Retry Connection</button>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 8px; text-align: center;">
+                        </p><button class="btn-primary" onclick="window.location.reload()" style="padding:10px 24px;border-radius:12px;">Retry Connection</button>
                 `;
             } else if (splash) {
                 splash.remove();
