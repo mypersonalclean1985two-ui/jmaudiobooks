@@ -329,7 +329,7 @@
                     ✓</div>
                 <h3 style="font-size: 1rem; margin-bottom: 6px;">Premium Annual</h3>
                 <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 2px;">
-                    $25.99<span
+                    <span class="price-amount" id="yearly-price">$25.99</span><span
                         style="font-size: 0.9rem; color: var(--text-secondary); font-weight: normal;">/year</span>
                 </div>
                 <div style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 8px;">Save 40% • Just
@@ -354,7 +354,8 @@
                 </div>
                 <h3 style="font-size: 1rem; margin-bottom: 6px;">Premium Monthly</h3>
                 <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 2px;">
-                    $3.99<span style="font-size: 0.9rem; color: var(--text-secondary); font-weight: normal;">/mo</span>
+                    <span class="price-amount" id="monthly-price">$3.99</span><span
+                        style="font-size: 0.9rem; color: var(--text-secondary); font-weight: normal;">/mo</span>
                 </div>
                 <div
                     style="color: var(--accent-primary); font-weight: 600; margin-bottom: 10px; font-size: 0.8rem; padding: 3px 6px; background: rgba(99, 102, 241, 0.1); display: inline-block; border-radius: 4px;">
@@ -451,62 +452,36 @@
                 monthlyCard.addEventListener('click', () => selectPlan('monthly'));
             }
 
-            // Initialize with annual selected
-            selectPlan('annual');
-
             // Subscribe button handler
             const subscribeBtn = document.getElementById('subscribe-btn');
             if (subscribeBtn) {
                 subscribeBtn.addEventListener('click', function () {
-                    console.log('Starting subscription for plan:', selectedPlan);
+                    console.log('Subscribe button clicked, selected plan:', selectedPlan);
 
-                    // Check if running in Capacitor (iOS/Android)
-                    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) {
-                        // iOS/Android In-App Purchase
-                        const productId = selectedPlan === 'annual' ? 'premium_annual' : 'premium_monthly';
-                        console.log('Initiating iOS/Android purchase for:', productId);
-
-                        window.Capacitor.Plugins.Purchases.purchaseProduct({ productIdentifier: productId })
-                            .then(result => {
-                                console.log('Purchase successful:', result);
-                                alert('Subscription activated! Enjoy unlimited audiobooks.');
-                                document.getElementById('subscription-modal').style.display = 'none';
-                            })
-                            .catch(error => {
-                                console.error('Purchase failed:', error);
-                                if (error.code !== 'USER_CANCELLED') {
-                                    alert('Purchase failed. Please try again.');
-                                }
-                            });
+                    // Call the global handleSubscription function with selected plan
+                    if (window.handleSubscriptionWithPlan) {
+                        window.handleSubscriptionWithPlan(selectedPlan);
                     } else {
-                        // Web fallback - show message
-                        console.log('Web environment - showing subscription info');
-                        alert(`Starting ${selectedPlan} subscription trial!\n\nPrice: ${selectedPlan === 'annual' ? '$25.99/year' : '$3.99/month'}\n14-day free trial included.`);
-                        document.getElementById('subscription-modal').style.display = 'none';
+                        console.error('handleSubscriptionWithPlan not available');
                     }
                 });
             }
 
-            // Restore purchases button
+            // Restore button handler
             const restoreBtn = document.getElementById('restore-btn');
             if (restoreBtn) {
                 restoreBtn.addEventListener('click', function () {
-                    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) {
-                        console.log('Restoring purchases...');
-                        window.Capacitor.Plugins.Purchases.restorePurchases()
-                            .then(result => {
-                                console.log('Restore successful:', result);
-                                alert('Purchases restored successfully!');
-                            })
-                            .catch(error => {
-                                console.error('Restore failed:', error);
-                                alert('No purchases found to restore.');
-                            });
+                    console.log('Restore purchases clicked');
+                    if (window.store) {
+                        window.store.refresh();
                     } else {
-                        alert('Restore purchases is only available in the mobile app.');
+                        console.log('Store not available for restore');
                     }
                 });
             }
+
+            // Initialize with annual selected
+            selectPlan('annual');
         });
     </script>
     <!-- About App Modal -->

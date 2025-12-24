@@ -554,8 +554,13 @@ function initApp() {
         }
     };
 
-    // IAP: Product Constants
-    const PRODUCT_ID_MONTHLY = 'premium_monthly'; // MUST Match App Store Connect
+    // IAP: Product Constants - MUST match App Store Connect exactly (case-sensitive)
+    const PRODUCT_ID_MONTHLY = 'com.jmaudiobooks.jmaudiobooks.monthly';
+    const PRODUCT_ID_YEARLY = 'com.jmaudiobooks.jmaudiobooks.yearly';
+
+    // Store prices from StoreKit (will be updated when products load)
+    let monthlyPrice = '$3.99'; // Fallback only
+    let yearlyPrice = '$25.99'; // Fallback only
 
     // IAP: Initialize Store
     document.addEventListener('deviceready', function () {
@@ -564,48 +569,109 @@ function initApp() {
             return;
         }
 
-        // 1. Register Product
-        store.register({
-            id: PRODUCT_ID_MONTHLY,
-            type: store.PAID_SUBSCRIPTION,
-            alias: 'premium_monthly'
-        });
+        // 1. Register BOTH Products
+        store.register([
+            {
+                id: PRODUCT_ID_MONTHLY,
+                type: store.PAID_SUBSCRIPTION
+            },
+            {
+                id: PRODUCT_ID_YEARLY,
+                type: store.PAID_SUBSCRIPTION
+            }
+        ]);
 
         // 2. Setup Event Listeners
-        // Log all events for debugging
-        store.when('product').updated(function (p) {
-            console.log('IAP Update:', p);
+        // Update prices when products load from StoreKit
+        store.when('product').updated(function (product) {
+            console.log('IAP Product Updated:', product);
+
+            // Update monthly price from StoreKit
+            if (product.id === PRODUCT_ID_MONTHLY && product.price) {
+                monthlyPrice = product.price;
+                console.log('Monthly price from StoreKit:', monthlyPrice);
+                updateSubscriptionPrices();
+            }
+
+            // Update yearly price from StoreKit
+            if (product.id === PRODUCT_ID_YEARLY && product.price) {
+                yearlyPrice = product.price;
+                console.log('Yearly price from StoreKit:', yearlyPrice);
+                updateSubscriptionPrices();
+            }
         });
 
-        // Handle Approved Purchase (User paid)
+        // Handle Approved Purchase for MONTHLY
         store.when(PRODUCT_ID_MONTHLY).approved(function (p) {
-            console.log('IAP Approved:', p);
-            // Verify receipt here (simulated verification for now)
+            console.log('IAP Approved (Monthly):', p);
             p.verify();
         });
 
-        // Handle Verified Purchase (Receipt valid)
+        // Handle Approved Purchase for YEARLY
+        store.when(PRODUCT_ID_YEARLY).approved(function (p) {
+            console.log('IAP Approved (Yearly):', p);
+            p.verify();
+        });
+
+        // Handle Verified Purchase for MONTHLY
         store.when(PRODUCT_ID_MONTHLY).verified(async function (p) {
-            console.log('IAP Verified:', p);
+            console.log('IAP Verified (Monthly):', p);
 
             if (window.currentUser) {
                 await window.firebaseHelpers.updateUserSubscription(window.currentUser.uid, {
                     status: 'active',
                     plan: 'monthly',
+                    productId: PRODUCT_ID_MONTHLY,
                     expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
                     purchasedAt: new Date()
                 });
 
                 window.globalUserProfile.subscriptionStatus = 'active';
+                window.globalUserProfile.subscriptionPlan = 'monthly';
                 localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
 
-                console.log("Subscription Active! Thank you.");
+                console.log("Monthly Subscription Active!");
                 window.closeModal('subscription-modal');
-                // Surgical refresh instead of full reload
                 renderHome();
                 renderDiscover();
             }
             p.finish();
+        });
+
+        // Handle Verified Purchase for YEARLY
+        store.when(PRODUCT_ID_YEARLY).verified(async function (p) {
+            console.log('IAP Verified (Yearly):', p);
+
+            if (window.currentUser) {
+                await window.firebaseHelpers.updateUserSubscription(window.currentUser.uid, {
+                    status: 'active',
+                    plan: 'yearly',
+                    productId: PRODUCT_ID_YEARLY,
+                    expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days
+                    purchasedAt: new Date()
+                });
+
+                window.globalUserProfile.subscriptionStatus = 'active';
+                window.globalUserProfile.subscriptionPlan = 'yearly';
+                localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
+
+                console.log("Yearly Subscription Active!");
+                window.closeModal('subscription-modal');
+                renderHome();
+                renderDiscover();
+            }
+            p.finish();
+        });
+
+        // Handle Owned (Restore Purchases)
+        store.when(PRODUCT_ID_MONTHLY).owned(function (product) {
+            console.log('Monthly subscription owned (active)');
+            unlockPremiumFeatures('monthly');
+        });
+
+        store.when(PRODUCT_ID_YEARLY).owned(function (product) {
+            console.log('Yearly subscription owned (active)');
+            unlockPremiumFeatures('yearly');
         });
 
         // Handle Errors
@@ -613,18 +679,115 @@ function initApp() {
             console.error("IAP Error Global:", e);
             const subBtn = document.getElementById('subscribe-btn');
             if (subBtn) {
-                subBtn.textContent = "Subscribe Error";
+                subBtn.textContent = "Purchase Error";
                 subBtn.disabled = false;
-                setTimeout(() => subBtn.textContent = "Subscribe Now", 3000);
+                setTimeout(() => subBtn.textContent = "Start Free Trial", 3000);
             }
             console.error("Store Error: " + e.message);
         });
 
-        // 3. Refresh Store
+        // 3. Refresh Store to load products and check entitlements
         store.refresh();
     });
 
-    // Real IAP Handler
+    // Function to unlock premium features
+    function unlockPremiumFeatures(plan) {
+        window.globalUserProfile.subscriptionStatus = 'active';
+        window.globalUserProfile.subscriptionPlan = plan;
+        localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
+
+        // Update Firestore if user is logged in
+        if (window.currentUser && !window.globalUserProfile.isGuest) {
+            window.firebaseHelpers.updateUserSubscription(window.currentUser.uid, {
+                status: 'active',
+                plan: plan,
+                restoredAt: new Date()
+            });
+        }
+    }
+
+    // Function to update subscription prices in UI
+    function updateSubscriptionPrices() {
+        // Update monthly price
+        const monthlyPriceEl = document.querySelector('#plan-monthly .price-amount');
+        if (monthlyPriceEl) {
+            monthlyPriceEl.textContent = monthlyPrice;
+        }
+
+        // Update yearly price
+        const yearlyPriceEl = document.querySelector('#plan-annual .price-amount');
+        if (yearlyPriceEl) {
+            yearlyPriceEl.textContent = yearlyPrice;
+        }
+
+        console.log('Updated subscription prices in UI');
+    }
+
+    // Real IAP Handler with Plan Selection
+    window.handleSubscriptionWithPlan = async function (planType) {
+        const subBtn = document.getElementById('subscribe-btn');
+        if (!subBtn) return;
+
+        // Determine Product ID based on selected plan
+        const productId = planType === 'monthly' ? PRODUCT_ID_MONTHLY : PRODUCT_ID_YEARLY;
+        console.log(`Purchasing ${planType} plan with Product ID: ${productId}`);
+
+        // Check if plugin is ready
+        if (!window.store) {
+            // FALLBACK TO SIMULATION FOR WEB TESTING
+            console.warn("IAP: Store not found (Web Mode). Using Simulation.");
+            const originalText = subBtn.textContent;
+            subBtn.textContent = "⏳ Simulating Store...";
+            subBtn.disabled = true;
+
+            try {
+                await new Promise(r => setTimeout(r, 1500));
+                if (window.currentUser) {
+                    const expiryDays = planType === 'monthly' ? 30 : 365;
+                    await window.firebaseHelpers.updateUserSubscription(window.currentUser.uid, {
+                        status: 'active',
+                        plan: planType,
+                        productId: productId,
+                        expiry: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
+                        purchasedAt: new Date()
+                    });
+
+                    window.globalUserProfile.subscriptionStatus = 'active';
+                    window.globalUserProfile.subscriptionPlan = planType;
+                    localStorage.setItem('userProfile', JSON.stringify(window.globalUserProfile));
+                }
+                console.log(`${planType} Subscription Successful (Simulated)`);
+                window.closeModal('subscription-modal');
+                renderHome();
+                renderDiscover();
+            } catch (e) {
+                console.error("Sim fail: " + e.message);
+            } finally {
+                subBtn.textContent = originalText;
+                subBtn.disabled = false;
+            }
+            return;
+        }
+
+        // NATIVE IAP FLOW
+        const originalText = subBtn.textContent;
+        subBtn.textContent = "Contacting App Store...";
+        subBtn.disabled = true;
+
+        try {
+            console.log(`Ordering product: ${productId}`);
+            store.order(productId);
+        } catch (error) {
+            console.error("Order failed:", error);
+            subBtn.textContent = "Purchase Error";
+            setTimeout(() => {
+                subBtn.textContent = originalText;
+                subBtn.disabled = false;
+            }, 2000);
+        }
+    };
+
+    // Real IAP Handler (legacy - keeping for compatibility)
     async function handleSubscription() {
         const subBtn = document.getElementById('subscribe-btn');
         if (!subBtn) return;
