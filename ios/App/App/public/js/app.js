@@ -567,6 +567,23 @@ function initApp() {
     let loadedProductIds = [];
     let productsLoadedCount = 0;
 
+    // Firebase remote logging helper
+    window.logIAPToFirebase = async function (eventName, data) {
+        try {
+            if (!window.db) return;
+            await window.db.collection('iap_logs').add({
+                event: eventName,
+                ...data,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                userAgent: navigator.userAgent
+            });
+            console.log('[FIREBASE LOG] Sent to Firestore:', eventName);
+        } catch (e) {
+            console.error('[FIREBASE LOG] Failed:', e);
+        }
+    };
+
+
     // IAP: Initialize Store
     document.addEventListener('deviceready', function () {
         console.log('[IAP DEBUG] ========================================');
@@ -600,7 +617,13 @@ function initApp() {
         ]);
 
         console.log('[IAP DEBUG] Products registered successfully');
-        console.log('[IAP DEBUG] Calling store.refresh() to fetch from StoreKit...');
+
+        // CRITICAL: Explicitly call refresh to fetch products from StoreKit
+        console.log('[IAP DEBUG] ========================================');
+        console.log('[IAP DEBUG] 🔄 Calling store.refresh() to fetch products...');
+        console.log('[IAP DEBUG] ========================================');
+        store.refresh();
+        console.log('[IAP DEBUG] store.refresh() called - waiting for StoreKit response...');
 
         // Log initial product count
         setTimeout(() => {
@@ -633,6 +656,16 @@ function initApp() {
             } else {
                 console.log('[IAP DEBUG] ✅ SUCCESS: All', productCount, 'products loaded correctly!');
             }
+
+            // Send critical logs to Firebase for remote debugging
+            window.logIAPToFirebase('product_fetch_result', {
+                userId: window.currentUser ? window.currentUser.uid : 'unknown',
+                productsRequested: 2,
+                productsReturned: productCount,
+                productIds: allProducts ? Object.keys(allProducts) : [],
+                bundleId: 'com.jmaudiobooks.jmaudiobooks',
+                platform: 'ios'
+            });
         }, 3000);
 
         // 2. Setup Event Listeners
