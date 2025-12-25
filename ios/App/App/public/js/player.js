@@ -14,15 +14,10 @@ let stats = { streak: 0, weekMinutes: 0, completedBooks: 0, lastPlayed: null };
 const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
 const pauseSvg = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
 
-// CORS Proxy Helper - Bypass archive.org CORS restrictions
+// CORS Proxy Helper - Archive.org supports CORS natively, no proxy needed
 function getCorsProxyUrl(url) {
-    // Only proxy archive.org URLs
-    if (!url || !url.includes('archive.org')) {
-        return url;
-    }
-
-    // Use AllOrigins proxy (reliable and free)
-    return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    // Archive.org supports CORS, return URL directly
+    return url;
 }
 
 // Load preliminary stats
