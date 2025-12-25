@@ -1398,7 +1398,35 @@ function initApp() {
         // Dynamic Categories from available books
         const categories = getAvailableCategories(books);
 
-        let discoveryHtml = `<div class="discovery-container">`;
+        let discoveryHtml = `
+            <div class="discovery-container">
+                <!-- Modern Search Bar -->
+                <div style="padding: 0 16px 20px 16px;">
+                    <div style="position: relative;">
+                        <input 
+                            type="text" 
+                            id="discover-search-input" 
+                            placeholder="🔍 Search thousands of audiobooks..."
+                            style="
+                                width: 100%;
+                                padding: 16px 20px 16px 48px;
+                                background: var(--bg-card);
+                                border: 2px solid var(--border-color);
+                                border-radius: 16px;
+                                color: var(--text-primary);
+                                font-size: 1rem;
+                                font-weight: 500;
+                                transition: all 0.3s ease;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                            "
+                            onfocus="this.style.borderColor='var(--accent-primary)'; this.style.boxShadow='0 8px 24px rgba(245, 158, 11, 0.2)';"
+                            onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';"
+                        />
+                        <div style="position: absolute; left: 18px; top: 50%; transform: translateY(-50%); font-size: 1.2rem; opacity: 0.5;">🔍</div>
+                    </div>
+                    <div id="search-results" style="margin-top: 16px;"></div>
+                </div>
+        `;
 
         // Add a "Trending" row
         discoveryHtml += `
@@ -1429,11 +1457,72 @@ function initApp() {
             if (grid) renderBooksGrid(filtered, grid);
         });
 
+        // Implement Fuzzy Search Algorithm
+        const searchInput = document.getElementById('discover-search-input');
+        const searchResults = document.getElementById('search-results');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim().toLowerCase();
+
+                if (query.length === 0) {
+                    searchResults.innerHTML = '';
+                    searchResults.style.display = 'none';
+                    return;
+                }
+
+                // Fuzzy search algorithm - matches partial words, author, title, genre
+                const results = books.filter(book => {
+                    const title = (book.title || '').toLowerCase();
+                    const author = (book.author || '').toLowerCase();
+                    const category = (book.category || '').toLowerCase();
+
+                    // Check if query matches any part of title, author, or category
+                    return title.includes(query) ||
+                        author.includes(query) ||
+                        category.includes(query) ||
+                        // Fuzzy match: check if all query characters appear in order
+                        fuzzyMatch(title, query) ||
+                        fuzzyMatch(author, query);
+                }).slice(0, 20); // Limit to 20 results
+
+                if (results.length > 0) {
+                    searchResults.style.display = 'block';
+                    searchResults.innerHTML = `
+                        <div style="background: var(--bg-card); border-radius: 16px; padding: 12px; border: 1px solid var(--border-color); box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px; font-weight: 600;">
+                                Found ${results.length} result${results.length > 1 ? 's' : ''}
+                            </div>
+                            <div class="books-grid" id="search-results-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;"></div>
+                        </div>
+                    `;
+                    renderBooksGrid(results, document.getElementById('search-results-grid'));
+                } else {
+                    searchResults.innerHTML = `
+                        <div style="background: var(--bg-card); border-radius: 16px; padding: 24px; text-align: center; border: 1px solid var(--border-color);">
+                            <div style="font-size: 2rem; margin-bottom: 8px;">📚</div>
+                            <div style="color: var(--text-secondary); font-size: 0.95rem;">No books found for "${e.target.value}"</div>
+                        </div>
+                    `;
+                    searchResults.style.display = 'block';
+                }
+            });
+        }
+
         if (window.CategoryEnhance) {
             window.CategoryEnhance.initHorizontalScroll('.books-grid');
         }
+    }
 
-
+    // Fuzzy match helper function
+    function fuzzyMatch(str, pattern) {
+        let patternIdx = 0;
+        for (let i = 0; i < str.length && patternIdx < pattern.length; i++) {
+            if (str[i] === pattern[patternIdx]) {
+                patternIdx++;
+            }
+        }
+        return patternIdx === pattern.length;
     }
 
     async function renderLibrary() {
